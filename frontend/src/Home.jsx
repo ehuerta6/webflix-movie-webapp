@@ -35,11 +35,25 @@ function Home() {
 
   // Helper function to generate placeholder data
   const generatePlaceholderData = (category, count) => {
+    const genres = [
+      'Action',
+      'Drama',
+      'Comedy',
+      'Sci-Fi',
+      'Horror',
+      'Romance',
+      'Thriller',
+      'Fantasy',
+    ]
+    const years = ['2023', '2022', '2021', '2020', '2024']
+
     return Array.from({ length: count }, (_, i) => ({
       id: `${category.toLowerCase().replace(' ', '-')}-${i}`,
       title: `${category} Title ${i + 1}`,
       poster: Math.random() > 0.3 ? null : 'some-url.jpg', // 70% chance of missing poster
       rating: (Math.random() * 5 + 5).toFixed(1), // Random rating between 5.0 and 10.0
+      genre: genres[Math.floor(Math.random() * genres.length)],
+      year: years[Math.floor(Math.random() * years.length)],
     }))
   }
 
@@ -81,10 +95,12 @@ function Home() {
             </p>
 
             <div className="flex gap-3 mt-3">
-              <button className="primary-button flex items-center gap-1">
+              <button className="primary-button flex items-center gap-1 cursor-pointer">
                 <span>▶</span> Watch
               </button>
-              <button className="secondary-button">Add to List</button>
+              <button className="secondary-button cursor-pointer">
+                Add to List
+              </button>
             </div>
           </div>
         </div>
@@ -103,7 +119,7 @@ function Home() {
           {items.map((item) => (
             <div
               key={item.id}
-              className="bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200"
+              className="bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200 cursor-pointer"
             >
               <div className="aspect-[2/3] relative">
                 <img
@@ -118,9 +134,19 @@ function Home() {
                 <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
                   <span className="text-[#5ccfee]">{item.rating}</span>
                 </div>
+
+                {/* Genre badge */}
+                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[#5ccfee] font-medium">
+                      {item.genre}
+                    </span>
+                    <span className="text-xs text-gray-300">{item.year}</span>
+                  </div>
+                </div>
               </div>
               <div className="p-2">
-                <h3 className="text-sm text-gray-200 font-normal truncate">
+                <h3 className="text-sm text-gray-200 font-medium truncate">
                   {item.title}
                 </h3>
               </div>
