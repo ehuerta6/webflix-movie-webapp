@@ -45,10 +45,10 @@ function Home() {
 
   // Featured component for the main highlight
   const Featured = ({ movie }) => (
-    <section className="relative mb-12 overflow-hidden shadow-2xl">
-      <div className="w-full h-[500px] relative">
+    <section className="relative mb-10">
+      <div className="w-full h-[400px] md:h-[450px] relative">
         {/* Gradient overlay for better text visibility */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-black/70 z-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#121212] to-transparent z-10"></div>
 
         {/* Background image */}
         <img
@@ -62,48 +62,29 @@ function Home() {
         />
 
         {/* Content overlay */}
-        <div className="absolute inset-0 flex flex-col justify-end p-8 z-20">
-          <div className="flex flex-col md:flex-row gap-6 items-start max-w-screen-xl mx-auto w-full">
-            {/* Poster */}
-            <div className="w-32 md:w-48 shrink-0 rounded overflow-hidden shadow-2xl hidden md:block border border-gray-800">
-              <img
-                src={movie.poster ? movie.poster : placeholderImg}
-                alt={movie.title}
-                className="w-full aspect-[2/3] object-cover"
-                onError={(e) => {
-                  e.target.onerror = null
-                  e.target.src = placeholderImg
-                }}
-              />
+        <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-8 z-20">
+          <div className="max-w-4xl mx-auto w-full">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="rating-badge">{movie.rating}</span>
+              <span className="text-gray-400 text-sm">{movie.year}</span>
+              <span className="text-gray-400 text-sm hidden sm:inline">
+                • {movie.genres.join(', ')}
+              </span>
             </div>
 
-            {/* Info */}
-            <div className="flex-1">
-              <div className="flex items-center gap-3">
-                <h1 className="text-4xl font-bold text-white mb-2">
-                  {movie.title}
-                </h1>
-                <span className="rating-badge">{movie.rating}</span>
-              </div>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-medium text-white mb-2">
+              {movie.title}
+            </h1>
 
-              <div className="text-gray-400 mb-3">
-                <span>{movie.year}</span>
-                <span className="mx-2">•</span>
-                <span>{movie.genres.join(', ')}</span>
-              </div>
+            <p className="text-gray-300 text-sm md:text-base leading-relaxed max-w-2xl mb-4 line-clamp-3 md:line-clamp-none">
+              {movie.description}
+            </p>
 
-              <p className="text-white text-lg max-w-2xl mb-4">
-                {movie.description}
-              </p>
-
-              <div className="flex gap-3 mt-4">
-                <button className="primary-button flex items-center gap-2">
-                  <span className="text-lg">▶</span> Watch Now
-                </button>
-                <button className="secondary-button flex items-center gap-2">
-                  <span>+</span> Add to Watchlist
-                </button>
-              </div>
+            <div className="flex gap-3 mt-3">
+              <button className="primary-button flex items-center gap-1">
+                <span>▶</span> Watch
+              </button>
+              <button className="secondary-button">Add to List</button>
             </div>
           </div>
         </div>
@@ -113,16 +94,16 @@ function Home() {
 
   // Section component for code reuse
   const Section = ({ title, items }) => (
-    <section className="mt-12 mb-8">
-      <div className="bg-black py-3 px-6 mb-6 border-l-4 border-[#00b7eb] shadow-md">
-        <h2 className="text-2xl font-bold text-white">{title}</h2>
-      </div>
+    <section className="mb-10">
+      <h2 className="text-lg md:text-xl font-medium text-white mb-4 px-4 md:px-6">
+        {title}
+      </h2>
       <div className="px-4">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           {items.map((item) => (
             <div
               key={item.id}
-              className="bg-[#121212] rounded overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-[0_0_15px_rgba(0,183,235,0.3)]"
+              className="bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200"
             >
               <div className="aspect-[2/3] relative">
                 <img
@@ -134,14 +115,12 @@ function Home() {
                     e.target.src = placeholderImg
                   }}
                 />
-                <div className="absolute top-0 right-0 bg-black bg-opacity-80 px-2 py-1 m-1 rounded">
-                  <span className="text-[#00b7eb] text-sm font-bold">
-                    {item.rating}
-                  </span>
+                <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
+                  <span className="text-[#5ccfee]">{item.rating}</span>
                 </div>
               </div>
-              <div className="p-3">
-                <h3 className="text-white font-semibold truncate">
+              <div className="p-2">
+                <h3 className="text-sm text-gray-200 font-normal truncate">
                   {item.title}
                 </h3>
               </div>
@@ -156,15 +135,15 @@ function Home() {
     return (
       <div className="flex justify-center items-center h-[80vh] text-white">
         <div className="flex flex-col items-center">
-          <div className="w-16 h-16 border-4 border-[#00b7eb] border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-2xl">Loading awesome content...</p>
+          <div className="w-8 h-8 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin mb-3"></div>
+          <p className="text-gray-400">Loading content...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-black min-h-screen pb-10">
+    <div className="bg-[#121212] min-h-screen pb-8">
       <div className="w-full mx-auto">
         {featured && <Featured movie={featured} />}
 

@@ -2,28 +2,28 @@ import profilePic from './assets/profile-pic.jpg'
 
 function Header() {
   return (
-    <header className="flex justify-between items-center px-8 py-4 bg-black text-white shadow-lg border-b border-[#222]">
-      <h1 className="m-0 text-[2rem] font-extrabold tracking-wide text-[#00b7eb] font-sans">
+    <header className="flex justify-between items-center px-6 py-4 bg-[#1e1e1e] text-white">
+      <h1 className="text-xl md:text-2xl font-medium text-[#5ccfee]">
         WEBFLIX
       </h1>
-      <nav className="flex items-center gap-4">
-        <button className="bg-transparent border-none text-white text-base cursor-pointer px-4 py-2 transition-colors duration-300 hover:text-[#00b7eb] rounded-md">
+      <nav className="flex items-center gap-2 md:gap-3">
+        <button className="text-sm md:text-base text-white hover:text-[#5ccfee] px-3 py-2 transition-colors">
           Home
         </button>
-        <button className="bg-transparent border-none text-white text-base cursor-pointer px-4 py-2 transition-colors duration-300 hover:text-[#00b7eb] rounded-md">
+        <button className="text-sm md:text-base text-white hover:text-[#5ccfee] px-3 py-2 transition-colors">
           Movies
         </button>
-        <button className="bg-transparent border-none text-white text-base cursor-pointer px-4 py-2 transition-colors duration-300 hover:text-[#00b7eb] rounded-md">
+        <button className="text-sm md:text-base text-white hover:text-[#5ccfee] px-3 py-2 transition-colors">
           Shows
         </button>
-        <button className="bg-transparent border-none text-white text-base cursor-pointer px-4 py-2 transition-colors duration-300 hover:text-[#00b7eb] rounded-md">
+        <button className="text-sm md:text-base text-white hover:text-[#5ccfee] px-3 py-2 transition-colors">
           Search
         </button>
-        <button className="w-8 h-8 border-2 border-[#00b7eb] p-0 bg-transparent rounded-full overflow-hidden flex items-center justify-center cursor-pointer">
+        <button className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center ml-1">
           <img
             src={profilePic}
             alt="Profile"
-            className="w-full h-full object-cover rounded-full hover:cursor-pointer"
+            className="w-full h-full object-cover"
           />
         </button>
       </nav>
