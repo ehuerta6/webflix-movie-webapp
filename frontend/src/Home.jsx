@@ -45,27 +45,35 @@ function Home() {
 
   // Featured component for the main highlight
   const Featured = ({ movie }) => (
-    <section className="relative mb-12 overflow-hidden rounded-lg shadow-xl">
+    <section className="relative mb-12 overflow-hidden shadow-2xl">
       <div className="w-full h-[500px] relative">
         {/* Gradient overlay for better text visibility */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent z-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-black/70 z-10"></div>
 
         {/* Background image */}
         <img
           src={movie.backdrop ? movie.backdrop : placeholderImg}
           alt={movie.title}
           className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.onerror = null
+            e.target.src = placeholderImg
+          }}
         />
 
         {/* Content overlay */}
         <div className="absolute inset-0 flex flex-col justify-end p-8 z-20">
-          <div className="flex flex-col md:flex-row gap-6 items-start">
+          <div className="flex flex-col md:flex-row gap-6 items-start max-w-screen-xl mx-auto w-full">
             {/* Poster */}
-            <div className="w-32 md:w-48 shrink-0 rounded-md overflow-hidden shadow-lg hidden md:block">
+            <div className="w-32 md:w-48 shrink-0 rounded overflow-hidden shadow-2xl hidden md:block border border-gray-800">
               <img
                 src={movie.poster ? movie.poster : placeholderImg}
                 alt={movie.title}
                 className="w-full aspect-[2/3] object-cover"
+                onError={(e) => {
+                  e.target.onerror = null
+                  e.target.src = placeholderImg
+                }}
               />
             </div>
 
@@ -75,12 +83,10 @@ function Home() {
                 <h1 className="text-4xl font-bold text-white mb-2">
                   {movie.title}
                 </h1>
-                <span className="text-yellow-400 font-bold bg-black/50 px-2 py-1 rounded-md">
-                  {movie.rating}
-                </span>
+                <span className="rating-badge">{movie.rating}</span>
               </div>
 
-              <div className="text-gray-300 mb-3">
+              <div className="text-gray-400 mb-3">
                 <span>{movie.year}</span>
                 <span className="mx-2">•</span>
                 <span>{movie.genres.join(', ')}</span>
@@ -91,11 +97,11 @@ function Home() {
               </p>
 
               <div className="flex gap-3 mt-4">
-                <button className="bg-[#00b7eb] text-white font-bold py-3 px-6 rounded-md hover:bg-[#0099c7] transition-colors">
-                  ▶ Watch Now
+                <button className="primary-button flex items-center gap-2">
+                  <span className="text-lg">▶</span> Watch Now
                 </button>
-                <button className="bg-transparent border border-white text-white font-bold py-3 px-6 rounded-md hover:bg-white/10 transition-colors">
-                  + Add to Watchlist
+                <button className="secondary-button flex items-center gap-2">
+                  <span>+</span> Add to Watchlist
                 </button>
               </div>
             </div>
@@ -108,7 +114,7 @@ function Home() {
   // Section component for code reuse
   const Section = ({ title, items }) => (
     <section className="mt-12 mb-8">
-      <div className="bg-[#1a1a2e] py-3 px-6 mb-6 rounded-sm shadow-md">
+      <div className="bg-black py-3 px-6 mb-6 border-l-4 border-[#00b7eb] shadow-md">
         <h2 className="text-2xl font-bold text-white">{title}</h2>
       </div>
       <div className="px-4">
@@ -116,16 +122,20 @@ function Home() {
           {items.map((item) => (
             <div
               key={item.id}
-              className="bg-[#2a2a2a] rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
+              className="bg-[#121212] rounded overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-[0_0_15px_rgba(0,183,235,0.3)]"
             >
               <div className="aspect-[2/3] relative">
                 <img
                   src={item.poster ? item.poster : placeholderImg}
                   alt={item.title}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null
+                    e.target.src = placeholderImg
+                  }}
                 />
-                <div className="absolute top-0 right-0 bg-black bg-opacity-70 px-2 py-1 m-1 rounded">
-                  <span className="text-yellow-400 text-sm font-bold">
+                <div className="absolute top-0 right-0 bg-black bg-opacity-80 px-2 py-1 m-1 rounded">
+                  <span className="text-[#00b7eb] text-sm font-bold">
                     {item.rating}
                   </span>
                 </div>
@@ -145,13 +155,16 @@ function Home() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[80vh] text-white">
-        <p className="text-2xl">Loading awesome content...</p>
+        <div className="flex flex-col items-center">
+          <div className="w-16 h-16 border-4 border-[#00b7eb] border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-2xl">Loading awesome content...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-[#121212] min-h-screen pb-10">
+    <div className="bg-black min-h-screen pb-10">
       <div className="w-full mx-auto">
         {featured && <Featured movie={featured} />}
 
