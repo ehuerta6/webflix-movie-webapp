@@ -6,6 +6,7 @@ import Details from './pages/Details'
 import Movies from './pages/Movies'
 import Shows from './pages/Shows'
 import SearchPage from './pages/SearchPage'
+import Auth from './pages/Auth'
 import './App.css'
 
 function App() {
@@ -20,6 +21,8 @@ function App() {
           <Route path="/shows" element={<Shows />} />
           <Route path="/about" element={<About />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/login" element={<Auth />} />
+          <Route path="/register" element={<Auth />} />
           <Route path="/:type/:id" element={<Details />} />
         </Routes>
       </BrowserRouter>

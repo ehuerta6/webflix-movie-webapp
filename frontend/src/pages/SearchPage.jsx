@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import profilePic from '../assets/profile-pic.jpg'
 
 // Mock data for initial display and search
 const mockData = {
@@ -247,7 +248,7 @@ const ContentCard = ({ item }) => {
       <div className="rounded-md overflow-hidden bg-[#1e1e1e] transition-transform duration-300 group-hover:scale-105 h-full flex flex-col">
         <div className="relative aspect-[2/3] overflow-hidden">
           <img
-            src={item.image}
+            src={profilePic}
             alt={item.title || item.name}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
           />
