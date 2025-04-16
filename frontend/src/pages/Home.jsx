@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import placeholderImg from '../assets/profile-pic.jpg'
+import MovieCard from '../components/MovieCard'
 
 function Home() {
   // State for different movie/show categories
@@ -123,41 +124,7 @@ function Home() {
       <div className="px-4">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           {items.map((item) => (
-            <Link
-              key={item.id}
-              to={`/${item.type}/${item.id}`}
-              className="bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200 cursor-pointer"
-            >
-              <div className="aspect-[2/3] relative">
-                <img
-                  src={item.poster ? item.poster : placeholderImg}
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.onerror = null
-                    e.target.src = placeholderImg
-                  }}
-                />
-                <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
-                  <span className="text-[#5ccfee]">{item.rating}</span>
-                </div>
-
-                {/* Genre badge */}
-                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-[#5ccfee] font-medium">
-                      {item.genre}
-                    </span>
-                    <span className="text-xs text-gray-300">{item.year}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="p-2">
-                <h3 className="text-sm text-gray-200 font-medium truncate">
-                  {item.title}
-                </h3>
-              </div>
-            </Link>
+            <MovieCard key={item.id} movie={item} />
           ))}
         </div>
       </div>
