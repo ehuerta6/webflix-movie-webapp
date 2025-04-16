@@ -105,30 +105,30 @@ function Auth() {
   }
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white px-4 py-8">
+    <div className="min-h-screen bg-[#121212] text-white px-4 py-4">
       <div className="max-w-6xl mx-auto">
         {/* Page Title */}
-        <h1 className="text-white text-2xl font-semibold text-center mb-8">
+        <h1 className="text-white text-2xl font-semibold text-center mb-6">
           Account Access / Login
         </h1>
 
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col md:flex-row gap-4">
           {/* Login Container */}
-          <div className="flex-1 bg-[#1a1a1a] rounded-2xl shadow-2xl border border-[#2a2a2a] overflow-hidden">
-            <div className="bg-[#212121] px-6 py-5 border-b border-[#2a2a2a]">
+          <div className="flex-1 bg-[#1a1a1a] rounded-2xl shadow-2xl border border-[#2a2a2a] overflow-hidden h-fit">
+            <div className="bg-[#212121] px-6 py-3 border-b border-[#2a2a2a]">
               <h2 className="text-xl font-bold text-white">Sign In</h2>
               <p className="text-gray-400 text-sm mt-1">
                 Already have an account? Sign in below
               </p>
             </div>
 
-            <div className="p-6">
-              <form onSubmit={handleLoginSubmit} className="space-y-5">
+            <div className="p-4">
+              <form onSubmit={handleLoginSubmit} className="space-y-3">
                 {/* Email Field */}
                 <div>
                   <label
                     htmlFor="login-email"
-                    className="block text-sm font-medium text-gray-300 mb-1.5"
+                    className="block text-sm font-medium text-gray-300 mb-1"
                   >
                     Email
                   </label>
@@ -173,7 +173,7 @@ function Auth() {
                 <div>
                   <label
                     htmlFor="login-password"
-                    className="block text-sm font-medium text-gray-300 mb-1.5"
+                    className="block text-sm font-medium text-gray-300 mb-1"
                   >
                     Password
                   </label>
@@ -199,7 +199,7 @@ function Auth() {
                       id="login-password"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
-                      className={`w-full bg-[#252525] text-white pl-10 pr-10 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5ccfee] transition-all duration-200 ${
+                      className={`w-full bg-[#252525] text-white pl-10 pr-10 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5ccfee] transition-all duration-200 ${
                         loginErrors.password
                           ? 'border border-red-500'
                           : 'border border-[#333]'
@@ -261,7 +261,7 @@ function Auth() {
                 <button
                   type="submit"
                   disabled={loginLoading}
-                  className="w-full bg-[#5ccfee] hover:bg-[#4ab3d3] text-black font-semibold py-2.5 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center"
+                  className="w-full bg-[#5ccfee] hover:bg-[#4ab3d3] text-black font-semibold py-2 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center"
                 >
                   {loginLoading ? (
                     <svg
@@ -290,7 +290,7 @@ function Auth() {
                 </button>
 
                 {/* Forgot Password Link */}
-                <div className="mt-5 text-center">
+                <div className="mt-3 text-center">
                   <Link
                     to="/forgot-password"
                     className="text-gray-400 hover:text-white text-sm transition-colors"
@@ -300,16 +300,16 @@ function Auth() {
                 </div>
 
                 {/* Google Auth Button */}
-                <div className="mt-6 pt-5 border-t border-[#2a2a2a]">
+                <div className="mt-4 pt-3 border-t border-[#2a2a2a]">
                   <button
                     type="button"
-                    className="w-full bg-[#252525] hover:bg-[#303030] text-white font-medium py-2.5 px-4 rounded-lg border border-[#333] transition-all duration-300 flex items-center justify-center gap-2"
+                    className="w-full bg-[#252525] hover:bg-[#303030] text-white font-medium py-2 px-4 rounded-lg border border-[#333] transition-all duration-300 flex items-center justify-center gap-2"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 48 48"
-                      width="20px"
-                      height="20px"
+                      width="18px"
+                      height="18px"
                     >
                       <path
                         fill="#FFC107"
@@ -336,21 +336,21 @@ function Auth() {
           </div>
 
           {/* Registration Container */}
-          <div className="flex-1 bg-[#1a1a1a] rounded-2xl shadow-2xl border border-[#2a2a2a] overflow-hidden">
-            <div className="bg-[#212121] px-6 py-5 border-b border-[#2a2a2a]">
+          <div className="flex-1 bg-[#1a1a1a] rounded-2xl shadow-2xl border border-[#2a2a2a] overflow-hidden h-fit">
+            <div className="bg-[#212121] px-6 py-3 border-b border-[#2a2a2a]">
               <h2 className="text-xl font-bold text-white">Create Account</h2>
               <p className="text-gray-400 text-sm mt-1">
                 New to Webflix? Register to get started
               </p>
             </div>
 
-            <div className="p-6">
-              <form onSubmit={handleRegisterSubmit} className="space-y-5">
+            <div className="p-4">
+              <form onSubmit={handleRegisterSubmit} className="space-y-3">
                 {/* Email Field */}
                 <div>
                   <label
                     htmlFor="register-email"
-                    className="block text-sm font-medium text-gray-300 mb-1.5"
+                    className="block text-sm font-medium text-gray-300 mb-1"
                   >
                     Email
                   </label>
@@ -376,7 +376,7 @@ function Auth() {
                       id="register-email"
                       value={registerEmail}
                       onChange={(e) => setRegisterEmail(e.target.value)}
-                      className={`w-full bg-[#252525] text-white pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5ccfee] transition-all duration-200 ${
+                      className={`w-full bg-[#252525] text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5ccfee] transition-all duration-200 ${
                         registerErrors.email
                           ? 'border border-red-500'
                           : 'border border-[#333]'
@@ -395,7 +395,7 @@ function Auth() {
                 <div>
                   <label
                     htmlFor="register-password"
-                    className="block text-sm font-medium text-gray-300 mb-1.5"
+                    className="block text-sm font-medium text-gray-300 mb-1"
                   >
                     Password
                   </label>
@@ -421,7 +421,7 @@ function Auth() {
                       id="register-password"
                       value={registerPassword}
                       onChange={(e) => setRegisterPassword(e.target.value)}
-                      className={`w-full bg-[#252525] text-white pl-10 pr-10 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5ccfee] transition-all duration-200 ${
+                      className={`w-full bg-[#252525] text-white pl-10 pr-10 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5ccfee] transition-all duration-200 ${
                         registerErrors.password
                           ? 'border border-red-500'
                           : 'border border-[#333]'
@@ -485,7 +485,7 @@ function Auth() {
                 <div>
                   <label
                     htmlFor="confirm-password"
-                    className="block text-sm font-medium text-gray-300 mb-1.5"
+                    className="block text-sm font-medium text-gray-300 mb-1"
                   >
                     Confirm Password
                   </label>
@@ -511,7 +511,7 @@ function Auth() {
                       id="confirm-password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className={`w-full bg-[#252525] text-white pl-10 pr-10 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5ccfee] transition-all duration-200 ${
+                      className={`w-full bg-[#252525] text-white pl-10 pr-10 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5ccfee] transition-all duration-200 ${
                         registerErrors.confirmPassword
                           ? 'border border-red-500'
                           : 'border border-[#333]'
@@ -580,7 +580,7 @@ function Auth() {
                       className="w-4 h-4 bg-[#252525] border-[#333] rounded focus:ring-[#5ccfee] focus:ring-2"
                     />
                   </div>
-                  <div className="ml-3 text-sm">
+                  <div className="ml-3 text-xs">
                     <label htmlFor="terms" className="text-gray-300">
                       I agree to the{' '}
                       <a href="#" className="text-[#5ccfee] hover:underline">
@@ -598,7 +598,7 @@ function Auth() {
                 <button
                   type="submit"
                   disabled={registerLoading}
-                  className="w-full bg-[#5ccfee] hover:bg-[#4ab3d3] text-black font-semibold py-2.5 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center"
+                  className="w-full bg-[#5ccfee] hover:bg-[#4ab3d3] text-black font-semibold py-2 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center"
                 >
                   {registerLoading ? (
                     <svg
@@ -627,16 +627,16 @@ function Auth() {
                 </button>
 
                 {/* Google Auth Button */}
-                <div className="mt-6 pt-5 border-t border-[#2a2a2a]">
+                <div className="mt-4 pt-3 border-t border-[#2a2a2a]">
                   <button
                     type="button"
-                    className="w-full bg-[#252525] hover:bg-[#303030] text-white font-medium py-2.5 px-4 rounded-lg border border-[#333] transition-all duration-300 flex items-center justify-center gap-2"
+                    className="w-full bg-[#252525] hover:bg-[#303030] text-white font-medium py-2 px-4 rounded-lg border border-[#333] transition-all duration-300 flex items-center justify-center gap-2"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 48 48"
-                      width="20px"
-                      height="20px"
+                      width="18px"
+                      height="18px"
                     >
                       <path
                         fill="#FFC107"

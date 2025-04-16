@@ -68,7 +68,7 @@ function Header() {
 
           {/* Profile link */}
           <Link
-            to="/profile"
+            to="/user"
             className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center ml-1 transition-transform duration-200 hover:scale-110 cursor-pointer no-underline app-link border border-transparent hover:border-[#5ccfee]"
           >
             <img
