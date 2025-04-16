@@ -3,6 +3,8 @@ import Header from './Header'
 import Home from './pages/Home'
 import About from './pages/About'
 import Details from './pages/Details'
+import Movies from './pages/Movies'
+import Shows from './pages/Shows'
 import './App.css'
 
 function App() {
@@ -13,8 +15,9 @@ function App() {
 
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/Home" element={<Home />} />
-          <Route path="/About" element={<About />} />
+          <Route path="/movies" element={<Movies />} />
+          <Route path="/shows" element={<Shows />} />
+          <Route path="/about" element={<About />} />
           <Route path="/:type/:id" element={<Details />} />
         </Routes>
       </BrowserRouter>

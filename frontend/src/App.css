@@ -27,14 +27,19 @@ body {
 
 a,
 button.link {
-  color: var(--primary-accent);
+  color: inherit;
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
-a:hover,
-button.link:hover {
-  color: var(--primary-accent-hover);
+/* Override React Router Link default styling */
+a.app-link {
+  color: inherit !important;
+  text-decoration: none !important;
+}
+
+a.app-link:hover {
+  color: var(--primary-accent) !important;
 }
 
 .primary-button {
