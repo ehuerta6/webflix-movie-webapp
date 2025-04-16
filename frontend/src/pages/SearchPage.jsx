@@ -10,7 +10,6 @@ const mockData = {
       title: 'The Last Journey',
       type: 'movie',
       genre: 'Adventure',
-      image: 'https://via.placeholder.com/300x450?text=The+Last+Journey',
       year: 2023,
     },
     {
@@ -18,7 +17,6 @@ const mockData = {
       title: 'Eternal Sunshine',
       type: 'movie',
       genre: 'Drama',
-      image: 'https://via.placeholder.com/300x450?text=Eternal+Sunshine',
       year: 2022,
     },
     {
@@ -26,7 +24,6 @@ const mockData = {
       title: 'Dark Knight',
       type: 'movie',
       genre: 'Action',
-      image: 'https://via.placeholder.com/300x450?text=Dark+Knight',
       year: 2021,
     },
     {
@@ -34,7 +31,6 @@ const mockData = {
       title: 'Lost in Space',
       type: 'movie',
       genre: 'Sci-Fi',
-      image: 'https://via.placeholder.com/300x450?text=Lost+in+Space',
       year: 2023,
     },
     {
@@ -42,7 +38,6 @@ const mockData = {
       title: 'The Great Adventure',
       type: 'movie',
       genre: 'Adventure',
-      image: 'https://via.placeholder.com/300x450?text=The+Great+Adventure',
       year: 2020,
     },
     {
@@ -50,7 +45,6 @@ const mockData = {
       title: 'Inception',
       type: 'movie',
       genre: 'Sci-Fi',
-      image: 'https://via.placeholder.com/300x450?text=Inception',
       year: 2022,
     },
     {
@@ -58,7 +52,6 @@ const mockData = {
       title: 'Pulp Fiction',
       type: 'movie',
       genre: 'Crime',
-      image: 'https://via.placeholder.com/300x450?text=Pulp+Fiction',
       year: 2021,
     },
     {
@@ -66,7 +59,6 @@ const mockData = {
       title: 'The Godfather',
       type: 'movie',
       genre: 'Crime',
-      image: 'https://via.placeholder.com/300x450?text=The+Godfather',
       year: 2020,
     },
     {
@@ -74,7 +66,6 @@ const mockData = {
       title: 'Interstellar',
       type: 'movie',
       genre: 'Sci-Fi',
-      image: 'https://via.placeholder.com/300x450?text=Interstellar',
       year: 2019,
     },
     {
@@ -82,7 +73,6 @@ const mockData = {
       title: 'The Matrix',
       type: 'movie',
       genre: 'Sci-Fi',
-      image: 'https://via.placeholder.com/300x450?text=The+Matrix',
       year: 2018,
     },
   ],
@@ -92,7 +82,6 @@ const mockData = {
       title: 'Stranger Things',
       type: 'tv',
       genre: 'Sci-Fi',
-      image: 'https://via.placeholder.com/300x450?text=Stranger+Things',
       year: 2022,
     },
     {
@@ -100,7 +89,6 @@ const mockData = {
       title: 'The Crown',
       type: 'tv',
       genre: 'Drama',
-      image: 'https://via.placeholder.com/300x450?text=The+Crown',
       year: 2021,
     },
     {
@@ -108,7 +96,6 @@ const mockData = {
       title: 'Breaking Bad',
       type: 'tv',
       genre: 'Crime',
-      image: 'https://via.placeholder.com/300x450?text=Breaking+Bad',
       year: 2020,
     },
     {
@@ -116,7 +103,6 @@ const mockData = {
       title: 'The Mandalorian',
       type: 'tv',
       genre: 'Sci-Fi',
-      image: 'https://via.placeholder.com/300x450?text=The+Mandalorian',
       year: 2022,
     },
     {
@@ -124,7 +110,6 @@ const mockData = {
       title: 'Game of Thrones',
       type: 'tv',
       genre: 'Fantasy',
-      image: 'https://via.placeholder.com/300x450?text=Game+of+Thrones',
       year: 2019,
     },
     {
@@ -132,7 +117,6 @@ const mockData = {
       title: 'The Office',
       type: 'tv',
       genre: 'Comedy',
-      image: 'https://via.placeholder.com/300x450?text=The+Office',
       year: 2020,
     },
     {
@@ -140,7 +124,6 @@ const mockData = {
       title: 'Black Mirror',
       type: 'tv',
       genre: 'Sci-Fi',
-      image: 'https://via.placeholder.com/300x450?text=Black+Mirror',
       year: 2021,
     },
     {
@@ -148,7 +131,6 @@ const mockData = {
       title: 'The Witcher',
       type: 'tv',
       genre: 'Fantasy',
-      image: 'https://via.placeholder.com/300x450?text=The+Witcher',
       year: 2022,
     },
     {
@@ -156,7 +138,6 @@ const mockData = {
       title: 'Euphoria',
       type: 'tv',
       genre: 'Drama',
-      image: 'https://via.placeholder.com/300x450?text=Euphoria',
       year: 2021,
     },
     {
@@ -164,7 +145,6 @@ const mockData = {
       title: 'The Boys',
       type: 'tv',
       genre: 'Action',
-      image: 'https://via.placeholder.com/300x450?text=The+Boys',
       year: 2022,
     },
   ],
@@ -172,52 +152,42 @@ const mockData = {
     {
       id: 'actor-1',
       name: 'Tom Hanks',
-      image: 'https://via.placeholder.com/300x450?text=Tom+Hanks',
     },
     {
       id: 'actor-2',
       name: 'Leonardo DiCaprio',
-      image: 'https://via.placeholder.com/300x450?text=Leonardo+DiCaprio',
     },
     {
       id: 'actor-3',
       name: 'Jennifer Lawrence',
-      image: 'https://via.placeholder.com/300x450?text=Jennifer+Lawrence',
     },
     {
       id: 'actor-4',
       name: 'Scarlett Johansson',
-      image: 'https://via.placeholder.com/300x450?text=Scarlett+Johansson',
     },
     {
       id: 'actor-5',
       name: 'Robert Downey Jr.',
-      image: 'https://via.placeholder.com/300x450?text=Robert+Downey+Jr.',
     },
     {
       id: 'actor-6',
       name: 'Meryl Streep',
-      image: 'https://via.placeholder.com/300x450?text=Meryl+Streep',
     },
     {
       id: 'actor-7',
       name: 'Brad Pitt',
-      image: 'https://via.placeholder.com/300x450?text=Brad+Pitt',
     },
     {
       id: 'actor-8',
       name: 'Chadwick Boseman',
-      image: 'https://via.placeholder.com/300x450?text=Chadwick+Boseman',
     },
     {
       id: 'actor-9',
       name: 'Emma Stone',
-      image: 'https://via.placeholder.com/300x450?text=Emma+Stone',
     },
     {
       id: 'actor-10',
       name: 'Denzel Washington',
-      image: 'https://via.placeholder.com/300x450?text=Denzel+Washington',
     },
   ],
   genres: [
