@@ -79,11 +79,11 @@ function Auth() {
   }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4 py-12">
-      <div className="bg-[#121212] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-[#2a2a2a]">
+    <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-8">
+      <div className="bg-[#1a1a1a] rounded-2xl shadow-2xl w-[90%] max-w-sm overflow-hidden border border-[#2a2a2a] h-fit">
         {/* Header */}
-        <div className="bg-[#1a1a1a] px-8 py-6 border-b border-[#2a2a2a]">
-          <h1 className="text-2xl font-bold text-white">
+        <div className="bg-[#212121] px-6 py-5 border-b border-[#2a2a2a]">
+          <h1 className="text-xl font-bold text-white">
             {isLoginMode ? 'Welcome Back' : 'Create Account'}
           </h1>
           <p className="text-gray-400 text-sm mt-1">
@@ -93,30 +93,18 @@ function Auth() {
           </p>
         </div>
 
-        <div className="p-8">
+        <div className="p-6">
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Field */}
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-300 mb-1.5"
               >
                 Email
               </label>
               <div className="relative">
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={`w-full bg-[#1e1e1e] text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5ccfee] transition-all duration-200 ${
-                    errors.email
-                      ? 'border border-red-500'
-                      : 'border border-[#333]'
-                  }`}
-                  placeholder="your@email.com"
-                />
                 <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -138,7 +126,7 @@ function Auth() {
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`w-full bg-[#1e1e1e] text-white pl-10 pr-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5ccfee] transition-all duration-200 ${
+                  className={`w-full bg-[#252525] text-white pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5ccfee] transition-all duration-200 ${
                     errors.email
                       ? 'border border-red-500'
                       : 'border border-[#333]'
@@ -155,23 +143,11 @@ function Auth() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-300 mb-1.5"
               >
                 Password
               </label>
               <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={`w-full bg-[#1e1e1e] text-white pl-10 pr-10 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5ccfee] transition-all duration-200 ${
-                    errors.password
-                      ? 'border border-red-500'
-                      : 'border border-[#333]'
-                  }`}
-                  placeholder="••••••••"
-                />
                 <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -188,6 +164,18 @@ function Auth() {
                     />
                   </svg>
                 </div>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`w-full bg-[#252525] text-white pl-10 pr-10 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5ccfee] transition-all duration-200 ${
+                    errors.password
+                      ? 'border border-red-500'
+                      : 'border border-[#333]'
+                  }`}
+                  placeholder="••••••••"
+                />
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white transition-colors"
@@ -242,23 +230,11 @@ function Auth() {
               <div>
                 <label
                   htmlFor="confirmPassword"
-                  className="block text-sm font-medium text-gray-300 mb-2"
+                  className="block text-sm font-medium text-gray-300 mb-1.5"
                 >
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    id="confirmPassword"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={`w-full bg-[#1e1e1e] text-white pl-10 pr-10 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5ccfee] transition-all duration-200 ${
-                      errors.confirmPassword
-                        ? 'border border-red-500'
-                        : 'border border-[#333]'
-                    }`}
-                    placeholder="••••••••"
-                  />
                   <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -275,6 +251,18 @@ function Auth() {
                       />
                     </svg>
                   </div>
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    id="confirmPassword"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className={`w-full bg-[#252525] text-white pl-10 pr-10 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5ccfee] transition-all duration-200 ${
+                      errors.confirmPassword
+                        ? 'border border-red-500'
+                        : 'border border-[#333]'
+                    }`}
+                    placeholder="••••••••"
+                  />
                   <button
                     type="button"
                     className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white transition-colors"
@@ -331,7 +319,7 @@ function Auth() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-[#5ccfee] hover:bg-[#4ab3d3] text-black font-semibold py-3 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center"
+              className="w-full bg-[#5ccfee] hover:bg-[#4ab3d3] text-black font-semibold py-2.5 rounded-lg transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center"
             >
               {isLoading ? (
                 <svg
@@ -363,7 +351,7 @@ function Auth() {
           </form>
 
           {/* Mode Toggle Link */}
-          <div className="mt-6 text-center">
+          <div className="mt-5 text-center">
             <button
               onClick={toggleMode}
               className="text-[#5ccfee] hover:text-[#4ab3d3] text-sm transition-colors"
@@ -375,7 +363,7 @@ function Auth() {
           </div>
 
           {/* Divider */}
-          <div className="flex items-center my-6">
+          <div className="flex items-center my-5">
             <div className="flex-grow h-px bg-[#2a2a2a]"></div>
             <span className="px-3 text-sm text-gray-400">OR</span>
             <div className="flex-grow h-px bg-[#2a2a2a]"></div>
@@ -384,7 +372,7 @@ function Auth() {
           {/* Social Login Buttons */}
           <button
             disabled
-            className="w-full bg-[#1e1e1e] border border-[#333] text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-[#2a2a2a] transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full bg-[#252525] border border-[#333] text-white font-medium py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-[#2a2a2a] transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -402,7 +390,7 @@ function Auth() {
 
           {/* Forgot Password (Login only) */}
           {isLoginMode && (
-            <div className="mt-6 text-center">
+            <div className="mt-5 text-center">
               <Link
                 to="/forgot-password"
                 className="text-gray-400 hover:text-white text-sm transition-colors"
