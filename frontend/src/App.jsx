@@ -5,6 +5,7 @@ import About from './pages/About'
 import Details from './pages/Details'
 import Movies from './pages/Movies'
 import Shows from './pages/Shows'
+import SearchPage from './pages/SearchPage'
 import './App.css'
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
           <Route path="/movies" element={<Movies />} />
           <Route path="/shows" element={<Shows />} />
           <Route path="/about" element={<About />} />
+          <Route path="/search" element={<SearchPage />} />
           <Route path="/:type/:id" element={<Details />} />
         </Routes>
       </BrowserRouter>

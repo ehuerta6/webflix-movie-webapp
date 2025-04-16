@@ -35,10 +35,10 @@ function Header() {
             Shows
           </Link>
 
-          {/* Search button */}
-          <button
-            onClick={() => setIsSearchOpen(true)}
-            className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer no-underline flex items-center"
+          {/* Search link - updated to navigate to search page */}
+          <Link
+            to="/search"
+            className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer no-underline flex items-center app-link"
             aria-label="Search"
           >
             <svg
@@ -56,7 +56,7 @@ function Header() {
               />
             </svg>
             <span className="ml-1 hidden md:inline">Search</span>
-          </button>
+          </Link>
 
           {/* Authentication link - temporary for testing */}
           <Link
@@ -79,9 +79,6 @@ function Header() {
           </Link>
         </nav>
       </header>
-
-      {/* Search Modal */}
-      <SearchBar isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </>
   )
 }
