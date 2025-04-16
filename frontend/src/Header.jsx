@@ -1,17 +1,13 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import profilePic from './assets/profile-pic.jpg'
-import SearchBar from './components/SearchBar'
 
 function Header() {
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
-
   return (
     <>
-      <header className="flex justify-between items-center px-6 py-4 bg-black text-white">
+      <header className="flex justify-between items-center px-6 py-4 bg-[#1a1a1a] border-b border-[#2a2a2a] text-white">
         <Link
           to="/"
-          className="text-xl md:text-2xl font-bold text-[#5ccfee] tracking-wide hover:text-[#4ab3d3] transition-colors duration-200 cursor-pointer no-underline app-link"
+          className="text-xl md:text-2xl font-bold text-[#00BFFF] tracking-wide transition-transform duration-200 hover:scale-105 cursor-pointer no-underline app-link"
         >
           WEBFLIX
         </Link>
@@ -35,7 +31,7 @@ function Header() {
             Shows
           </Link>
 
-          {/* Search link - updated to navigate to search page */}
+          {/* Search link */}
           <Link
             to="/search"
             className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer no-underline flex items-center app-link"
@@ -58,7 +54,7 @@ function Header() {
             <span className="ml-1 hidden md:inline">Search</span>
           </Link>
 
-          {/* Authentication link - temporary for testing */}
+          {/* Authentication link */}
           <Link
             to="/login"
             className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer no-underline app-link"
@@ -66,7 +62,7 @@ function Header() {
             Login
           </Link>
 
-          {/* Profile link - using the profile picture */}
+          {/* Profile link */}
           <Link
             to="/profile"
             className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center ml-1 transition-transform duration-200 hover:scale-110 cursor-pointer no-underline app-link border border-transparent hover:border-[#5ccfee]"

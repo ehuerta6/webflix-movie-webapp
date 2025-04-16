@@ -356,7 +356,7 @@ function SearchPage() {
   const hasResults = allResults.length > 0
 
   return (
-    <div className="min-h-screen bg-black pb-12">
+    <div className="min-h-screen bg-[#121212] text-white pb-12">
       {/* Search header */}
       <div className="pt-6 pb-8 px-6 md:px-12">
         <div className="max-w-4xl mx-auto">
