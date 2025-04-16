@@ -4,15 +4,73 @@ import placeholderImg from '../assets/profile-pic.jpg'
 
 function Shows() {
   const [shows, setShows] = useState([])
+  const [filteredShows, setFilteredShows] = useState([])
   const [loading, setLoading] = useState(true)
+
+  // Filter states
+  const [selectedGenre, setSelectedGenre] = useState('All')
+  const [sortBy, setSortBy] = useState('Default')
+
+  // Available genres
+  const genres = [
+    'All',
+    'Drama',
+    'Comedy',
+    'Sci-Fi',
+    'Horror',
+    'Action',
+    'Adventure',
+    'Mystery',
+    'Fantasy',
+    'Thriller',
+    'Crime',
+  ]
+
+  // Sort options
+  const sortOptions = ['Default', 'Top Rated', 'Newest', 'Most Popular']
 
   useEffect(() => {
     // Simulate fetching data
     setTimeout(() => {
-      setShows(generateShowData(24))
+      const showData = generateShowData(24)
+      setShows(showData)
+      setFilteredShows(showData)
       setLoading(false)
     }, 1000)
   }, [])
+
+  // Apply filters whenever filter criteria change
+  useEffect(() => {
+    if (shows.length === 0) return
+
+    let result = [...shows]
+
+    // Filter by genre
+    if (selectedGenre !== 'All') {
+      result = result.filter((show) => show.genre === selectedGenre)
+    }
+
+    // Apply sorting
+    switch (sortBy) {
+      case 'Top Rated':
+        result = [...result].sort(
+          (a, b) => parseFloat(b.rating) - parseFloat(a.rating)
+        )
+        break
+      case 'Newest':
+        result = [...result].sort((a, b) => parseInt(b.year) - parseInt(a.year))
+        break
+      case 'Most Popular':
+        // Simulating popularity with a random factor for demo purposes
+        result = [...result].sort((a, b) => b.popularity - a.popularity)
+        break
+      default:
+        // Default sort - keep original order
+        break
+    }
+
+    setFilteredShows(result)
+  }, [selectedGenre, sortBy, shows])
 
   // Generate mock TV show data
   const generateShowData = (count) => {
@@ -60,6 +118,7 @@ function Shows() {
       rating: (Math.random() * 5 + 5).toFixed(1),
       genre: genres[Math.floor(Math.random() * genres.length)],
       year: years[Math.floor(Math.random() * years.length)],
+      popularity: Math.random() * 10, // Random popularity score for sorting
     }))
   }
 
@@ -86,30 +145,98 @@ function Shows() {
           </p>
         </div>
 
-        {/* Filters - Could be expanded in the future */}
-        <div className="mb-8 flex flex-wrap gap-3">
-          <button className="px-4 py-2 bg-[#1e1e1e] text-white hover:bg-[#2a2a2a] rounded-full text-sm font-medium transition-colors">
-            All
-          </button>
-          <button className="px-4 py-2 bg-[#1e1e1e] text-gray-400 hover:bg-[#2a2a2a] hover:text-white rounded-full text-sm font-medium transition-colors">
-            Drama
-          </button>
-          <button className="px-4 py-2 bg-[#1e1e1e] text-gray-400 hover:bg-[#2a2a2a] hover:text-white rounded-full text-sm font-medium transition-colors">
-            Comedy
-          </button>
-          <button className="px-4 py-2 bg-[#1e1e1e] text-gray-400 hover:bg-[#2a2a2a] hover:text-white rounded-full text-sm font-medium transition-colors">
-            Sci-Fi
-          </button>
-          <button className="px-4 py-2 bg-[#1e1e1e] text-gray-400 hover:bg-[#2a2a2a] hover:text-white rounded-full text-sm font-medium transition-colors">
-            Crime
-          </button>
+        {/* Filter Bar - Sticky at the top */}
+        <div className="sticky top-0 z-10 bg-[#121212] py-4 border-b border-[#1e1e1e] mb-8">
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+            {/* Genre Filter */}
+            <div className="flex flex-col gap-2">
+              <label htmlFor="genre-select" className="text-sm text-gray-400">
+                Genre
+              </label>
+              <select
+                id="genre-select"
+                value={selectedGenre}
+                onChange={(e) => setSelectedGenre(e.target.value)}
+                className="bg-[#1e1e1e] text-white px-4 py-2 rounded-md border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#5ccfee] min-w-[150px]"
+              >
+                {genres.map((genre) => (
+                  <option key={genre} value={genre}>
+                    {genre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sort Filter */}
+            <div className="flex flex-col gap-2">
+              <label htmlFor="sort-select" className="text-sm text-gray-400">
+                Sort By
+              </label>
+              <select
+                id="sort-select"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-[#1e1e1e] text-white px-4 py-2 rounded-md border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#5ccfee] min-w-[150px]"
+              >
+                {sortOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Active Filters Display */}
+            <div className="md:ml-auto">
+              {(selectedGenre !== 'All' || sortBy !== 'Default') && (
+                <div className="flex gap-2 items-center flex-wrap">
+                  <span className="text-sm text-gray-400">Active filters:</span>
+                  {selectedGenre !== 'All' && (
+                    <span className="bg-[#5ccfee20] text-[#5ccfee] text-xs px-3 py-1 rounded-full">
+                      {selectedGenre}
+                    </span>
+                  )}
+                  {sortBy !== 'Default' && (
+                    <span className="bg-[#5ccfee20] text-[#5ccfee] text-xs px-3 py-1 rounded-full">
+                      {sortBy}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => {
+                      setSelectedGenre('All')
+                      setSortBy('Default')
+                    }}
+                    className="text-xs text-gray-400 hover:text-white underline"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Results count */}
+        <div className="mb-6">
+          <p className="text-gray-400 text-sm">
+            {filteredShows.length}{' '}
+            {filteredShows.length === 1 ? 'show' : 'shows'} found
+          </p>
         </div>
 
         {/* Shows Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-          {shows.map((show) => (
-            <MovieCard key={show.id} movie={show} />
-          ))}
+          {filteredShows.length > 0 ? (
+            filteredShows.map((show) => (
+              <MovieCard key={show.id} movie={show} />
+            ))
+          ) : (
+            <div className="col-span-full text-center py-10">
+              <p className="text-gray-400">
+                No shows match your filters. Try changing your selection.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
