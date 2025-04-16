@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import profilePic from './assets/profile-pic.jpg'
 
 function Header() {
@@ -7,12 +8,21 @@ function Header() {
         WEBFLIX
       </h1>
       <nav className="flex items-center gap-2 md:gap-4">
-        <button className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer">
+        <Link
+          to="/Home"
+          className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer"
+        >
           Home
-        </button>
+        </Link>
         <button className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer">
           Movies
         </button>
+        <Link
+          to="/About"
+          className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer"
+        >
+          About
+        </Link>
         <button className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer">
           Shows
         </button>

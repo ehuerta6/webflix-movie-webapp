@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import placeholderImg from './assets/profile-pic.jpg'
+import { Link } from 'react-router-dom'
+import placeholderImg from '../assets/profile-pic.jpg'
 
 function Home() {
   // State for different movie/show categories
@@ -16,6 +17,7 @@ function Home() {
     setTimeout(() => {
       setFeatured({
         id: 'featured-movie',
+        type: 'movie',
         title: 'The Spectacular Journey',
         poster: null, // Will use placeholder
         backdrop: null, // Will use placeholder
@@ -25,16 +27,16 @@ function Home() {
         year: '2023',
         genres: ['Adventure', 'Fantasy', 'Sci-Fi'],
       })
-      setInTheaters(generatePlaceholderData('In Theaters', 6))
-      setPopular(generatePlaceholderData('Popular', 6))
-      setTopRatedMovies(generatePlaceholderData('Top Movies', 6))
-      setTopRatedShows(generatePlaceholderData('Top Shows', 6))
+      setInTheaters(generatePlaceholderData('In Theaters', 6, 'movie'))
+      setPopular(generatePlaceholderData('Popular', 6, 'movie'))
+      setTopRatedMovies(generatePlaceholderData('Top Movies', 6, 'movie'))
+      setTopRatedShows(generatePlaceholderData('Top Shows', 6, 'tv'))
       setLoading(false)
     }, 1000)
   }, [])
 
   // Helper function to generate placeholder data
-  const generatePlaceholderData = (category, count) => {
+  const generatePlaceholderData = (category, count, type = 'movie') => {
     const genres = [
       'Action',
       'Drama',
@@ -49,6 +51,7 @@ function Home() {
 
     return Array.from({ length: count }, (_, i) => ({
       id: `${category.toLowerCase().replace(' ', '-')}-${i}`,
+      type: type, // 'movie' or 'tv'
       title: `${category} Title ${i + 1}`,
       poster: Math.random() > 0.3 ? null : 'some-url.jpg', // 70% chance of missing poster
       rating: (Math.random() * 5 + 5).toFixed(1), // Random rating between 5.0 and 10.0
@@ -95,9 +98,12 @@ function Home() {
             </p>
 
             <div className="flex gap-3 mt-3">
-              <button className="primary-button flex items-center gap-1 cursor-pointer">
+              <Link
+                to={`/${movie.type}/${movie.id}`}
+                className="primary-button flex items-center gap-1 cursor-pointer"
+              >
                 <span>▶</span> Watch
-              </button>
+              </Link>
               <button className="secondary-button cursor-pointer">
                 Add to List
               </button>
@@ -117,8 +123,9 @@ function Home() {
       <div className="px-4">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           {items.map((item) => (
-            <div
+            <Link
               key={item.id}
+              to={`/${item.type}/${item.id}`}
               className="bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200 cursor-pointer"
             >
               <div className="aspect-[2/3] relative">
@@ -150,7 +157,7 @@ function Home() {
                   {item.title}
                 </h3>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
