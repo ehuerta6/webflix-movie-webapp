@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import placeholderImg from '../assets/profile-pic.jpg'
 
-// Mock data for cast members
+// Mock data for cast members - adding more to demonstrate scrolling
 const mockCast = [
   {
     id: 'cast-1',
@@ -32,6 +32,36 @@ const mockCast = [
     id: 'cast-5',
     name: 'Actor Name 5',
     character: 'Character 5',
+    profile: null,
+  },
+  {
+    id: 'cast-6',
+    name: 'Actor Name 6',
+    character: 'Character 6',
+    profile: null,
+  },
+  {
+    id: 'cast-7',
+    name: 'Actor Name 7',
+    character: 'Character 7',
+    profile: null,
+  },
+  {
+    id: 'cast-8',
+    name: 'Actor Name 8',
+    character: 'Character 8',
+    profile: null,
+  },
+  {
+    id: 'cast-9',
+    name: 'Actor Name 9',
+    character: 'Character 9',
+    profile: null,
+  },
+  {
+    id: 'cast-10',
+    name: 'Actor Name 10',
+    character: 'Character 10',
     profile: null,
   },
 ]
@@ -256,16 +286,48 @@ function Details() {
         </div>
       </div>
 
-      {/* Cast Section */}
+      {/* Cast Section - Horizontal Scrollable */}
       <div className="max-w-screen-xl mx-auto px-4 mt-12">
-        <h2 className="text-xl text-white mb-4">Cast</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl text-white">Cast</h2>
+          <div className="flex gap-2">
+            <button
+              className="text-white bg-[#1e1e1e] rounded-full w-8 h-8 flex items-center justify-center hover:bg-[#2a2a2a] transition-colors"
+              onClick={() => {
+                const castContainer = document.getElementById('cast-scroll')
+                if (castContainer) {
+                  castContainer.scrollLeft -= 200
+                }
+              }}
+            >
+              ←
+            </button>
+            <button
+              className="text-white bg-[#1e1e1e] rounded-full w-8 h-8 flex items-center justify-center hover:bg-[#2a2a2a] transition-colors"
+              onClick={() => {
+                const castContainer = document.getElementById('cast-scroll')
+                if (castContainer) {
+                  castContainer.scrollLeft += 200
+                }
+              }}
+            >
+              →
+            </button>
+          </div>
+        </div>
+
+        {/* Horizontal scrollable container */}
+        <div
+          id="cast-scroll"
+          className="flex overflow-x-auto pb-4 hide-scrollbar space-x-4"
+          style={{ scrollBehavior: 'smooth' }}
+        >
           {cast.map((person) => (
             <div
               key={person.id}
-              className="bg-[#1e1e1e] rounded overflow-hidden"
+              className="flex-shrink-0 w-[120px] bg-[#1e1e1e] rounded overflow-hidden"
             >
-              <div className="aspect-[2/3]">
+              <div className="w-full aspect-[2/3]">
                 <img
                   src={person.profile ? person.profile : placeholderImg}
                   alt={person.name}
@@ -277,10 +339,12 @@ function Details() {
                 />
               </div>
               <div className="p-2">
-                <h3 className="text-white text-sm font-medium">
+                <h3 className="text-white text-sm font-medium truncate">
                   {person.name}
                 </h3>
-                <p className="text-gray-400 text-xs">{person.character}</p>
+                <p className="text-gray-400 text-xs truncate">
+                  {person.character}
+                </p>
               </div>
             </div>
           ))}
@@ -332,5 +396,18 @@ function Details() {
     </div>
   )
 }
+
+// Add a style to hide the scrollbar but keep functionality
+const style = document.createElement('style')
+style.textContent = `
+  .hide-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;     /* Firefox */
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;            /* Chrome, Safari, Opera */
+  }
+`
+document.head.appendChild(style)
 
 export default Details
