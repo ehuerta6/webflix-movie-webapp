@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import placeholderImg from '../assets/movie-placeholder.png'
 import MovieCard from '../components/MovieCard'
 import { fetchTrending, fetchMovies, fetchShows } from '../services/api'
 
@@ -11,7 +10,7 @@ const isValidContent = (item) => {
   return (
     // Check for valid title/name
     (item.title || item.name) &&
-    // Check for valid poster
+    // Check for valid poster (required)
     item.poster_path &&
     // Check for non-empty overview
     item.overview &&
@@ -140,12 +139,13 @@ function Home() {
 
       try {
         // Fetch trending content for featured section and popular section
-        const trendingData = await fetchTrending('all', 'day')
+        const trendingData = await fetchTrending('all', 'week')
 
         if (trendingData.results && trendingData.results.length > 0) {
-          // Filter valid content first
-          const validTrendingResults =
-            trendingData.results.filter(isValidContent)
+          // Filter valid content first - require both poster and backdrop for featured items
+          const validTrendingResults = trendingData.results.filter(
+            (item) => isValidContent(item) && item.backdrop_path
+          )
 
           if (validTrendingResults.length > 0) {
             // Use the first 5 valid trending items as featured content
@@ -228,7 +228,7 @@ function Home() {
 
   // Featured component for the main highlight with carousel
   const Featured = ({ movie }) => {
-    if (!movie) return null
+    if (!movie || !movie.backdrop) return null
 
     // Function to go to the next item
     const goToNext = (e) => {
@@ -275,16 +275,12 @@ function Home() {
           >
             <img
               key={movie.id} // Key helps React identify when to animate
-              src={movie.backdrop ? movie.backdrop : placeholderImg}
+              src={movie.backdrop}
               alt={movie.title}
               className="w-full h-full object-cover transition-all duration-700 ease-out"
               style={{
                 transform: 'scale(1.05)',
                 animation: 'fadeIn 800ms ease-in-out forwards',
-              }}
-              onError={(e) => {
-                e.target.onerror = null
-                e.target.src = placeholderImg
               }}
             />
           </div>

@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import placeholderImg from '../assets/movie-placeholder.png'
 import {
   searchTMDB,
   fetchGenres,
@@ -151,36 +150,33 @@ function SearchPage() {
     // Basic requirements for all types
     const hasIdentifier = item.id > 0
     const hasTitle = item.title || item.name
+    const hasPoster = !!item.poster_path // Must have a poster
 
     // Different validations based on media type
     if (item.media_type === 'movie' || (hasTitle && item.title)) {
-      // For movies: need at least title and either poster or overview
-      return hasIdentifier && hasTitle && (item.poster_path || item.overview)
+      // For movies: require title, poster, and overview
+      return hasIdentifier && hasTitle && hasPoster && item.overview
     } else if (
       item.media_type === 'tv' ||
       (hasTitle && item.name && !item.title)
     ) {
-      // For TV shows: strict validation - require poster, title and overview
+      // For TV shows: require poster, title, overview and air date
       return (
         hasIdentifier &&
         hasTitle &&
-        item.poster_path &&
+        hasPoster &&
         item.overview &&
         item.overview.trim() !== '' &&
         ((item.first_air_date && item.first_air_date.trim() !== '') ||
           (item.release_date && item.release_date.trim() !== ''))
       )
     } else if (item.media_type === 'person') {
-      // For people: need at least name and profile path
+      // For people: need name and profile path
       return hasIdentifier && hasTitle && item.profile_path
     }
 
-    // If media_type is not specified and can't determine the type, use generic validation
-    return (
-      hasIdentifier &&
-      hasTitle &&
-      (item.poster_path || item.profile_path || item.overview)
-    )
+    // If media_type is not specified and can't determine the type, use strict validation
+    return hasIdentifier && hasTitle && hasPoster && item.overview
   }
 
   // Load genres for proper display and search
@@ -550,9 +546,10 @@ function SearchPage() {
         const trendingData = await fetchTrending('all', 'day')
 
         if (trendingData.results && trendingData.results.length > 0) {
-          // Filter valid content using the isValidContent function
-          const validTrendingResults =
-            trendingData.results.filter(isValidContent)
+          // Filter valid content requiring both poster and backdrop
+          const validTrendingResults = trendingData.results.filter(
+            (item) => isValidContent(item) && item.backdrop_path
+          )
 
           if (validTrendingResults.length > 0) {
             // Use the first 5 valid trending items as featured content
@@ -583,7 +580,8 @@ function SearchPage() {
 
   // Featured component for the main highlight with carousel
   const Featured = ({ movie }) => {
-    if (!movie) return null
+    // Don't render if movie data is invalid or missing backdrop
+    if (!movie || !movie.backdrop) return null
 
     // Function to go to the next item
     const goToNext = (e) => {
@@ -640,7 +638,6 @@ function SearchPage() {
               }}
               onError={(e) => {
                 e.target.onerror = null
-                e.target.src = placeholderImg
               }}
             />
           </div>
@@ -1066,6 +1063,9 @@ function SearchPage() {
 function ResultCard({ item }) {
   // Different card renderings based on media type
   if (item.type === 'person') {
+    // Skip rendering if no profile path
+    if (!item.posterPath) return null
+
     return (
       <Link
         to={`/person/${item.id}`}
@@ -1074,17 +1074,9 @@ function ResultCard({ item }) {
         <div className="flex h-full flex-col">
           <div className="w-full h-24 overflow-hidden">
             <img
-              src={
-                item.posterPath
-                  ? `https://image.tmdb.org/t/p/w185${item.posterPath}`
-                  : placeholderImg
-              }
+              src={`https://image.tmdb.org/t/p/w185${item.posterPath}`}
               alt={item.title}
               className="w-full h-full object-cover object-top"
-              onError={(e) => {
-                e.target.onerror = null
-                e.target.src = placeholderImg
-              }}
             />
           </div>
           <div className="p-1.5 flex-1">
@@ -1104,6 +1096,9 @@ function ResultCard({ item }) {
   }
 
   // Movie or TV Show card (more compact)
+  // Skip rendering if no poster path
+  if (!item.posterPath) return null
+
   return (
     <Link
       to={`/${item.type}/${item.id}`}
@@ -1111,17 +1106,9 @@ function ResultCard({ item }) {
     >
       <div className="aspect-[2/3] relative">
         <img
-          src={
-            item.posterPath
-              ? `https://image.tmdb.org/t/p/w185${item.posterPath}`
-              : placeholderImg
-          }
+          src={`https://image.tmdb.org/t/p/w185${item.posterPath}`}
           alt={item.title}
           className="w-full h-full object-cover"
-          onError={(e) => {
-            e.target.onerror = null
-            e.target.src = placeholderImg
-          }}
         />
         {item.rating && (
           <div className="absolute top-0 right-0 bg-black/60 px-1 py-0.5 m-0.5 rounded text-[10px]">

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import placeholderImg from '../assets/movie-placeholder.png'
 import { fetchMovieDetails, fetchShowDetails } from '../services/api'
 
 // Helper function with simplified content validation
@@ -9,7 +8,8 @@ const isValidContent = (item) => {
 
   const hasBasics =
     (item.title || item.name) &&
-    (item.poster_path || item.backdrop_path) &&
+    // Require poster_path for all content
+    item.poster_path &&
     item.overview?.trim() &&
     item.vote_average > 0
 
@@ -77,59 +77,65 @@ const getTrailerUrl = (videos) => {
 }
 
 // Content Card component for reuse
-const ContentCard = ({ item, type }) => (
-  <Link
-    to={`/${type}/${item.id}`}
-    className="w-36 flex-shrink-0 bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200"
-  >
-    <div className="aspect-[2/3] relative">
-      <img
-        src={item.poster || placeholderImg}
-        alt={item.title}
-        className="w-full h-full object-cover"
-        onError={(e) => {
-          e.target.src = placeholderImg
-        }}
-      />
-      <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
-        <span className="text-[#5ccfee]">{item.rating}</span>
-      </div>
-      <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-[#5ccfee] font-medium truncate max-w-[70%]">
-            {item.genre}
-          </span>
-          <span className="text-xs text-gray-300">{item.year}</span>
+const ContentCard = ({ item, type }) => {
+  // Skip rendering if no poster
+  if (!item.poster) return null
+
+  return (
+    <Link
+      to={`/${type}/${item.id}`}
+      className="w-36 flex-shrink-0 bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200"
+    >
+      <div className="aspect-[2/3] relative">
+        <img
+          src={item.poster}
+          alt={item.title}
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
+          <span className="text-[#5ccfee]">{item.rating}</span>
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-[#5ccfee] font-medium truncate max-w-[70%]">
+              {item.genre}
+            </span>
+            <span className="text-xs text-gray-300">{item.year}</span>
+          </div>
         </div>
       </div>
-    </div>
-    <div className="p-2">
-      <h3 className="text-sm text-gray-200 font-medium truncate">
-        {item.title}
-      </h3>
-    </div>
-  </Link>
-)
+      <div className="p-2">
+        <h3 className="text-sm text-gray-200 font-medium truncate">
+          {item.title}
+        </h3>
+      </div>
+    </Link>
+  )
+}
 
 // Cast Card component for reuse
-const CastCard = ({ person }) => (
-  <div className="w-32 flex-shrink-0 bg-[#1e1e1e] rounded overflow-hidden">
-    <div className="w-full h-40 overflow-hidden">
-      <img
-        src={person.profile || placeholderImg}
-        alt={person.name}
-        className="w-full h-full object-cover object-center"
-        onError={(e) => {
-          e.target.src = placeholderImg
-        }}
-      />
+const CastCard = ({ person }) => {
+  // Skip rendering if no profile image
+  if (!person.profile) return null
+
+  return (
+    <div className="w-32 flex-shrink-0 bg-[#1e1e1e] rounded overflow-hidden">
+      <div className="w-full h-40 overflow-hidden">
+        <img
+          src={person.profile}
+          alt={person.name}
+          className="w-full h-full object-cover object-center"
+        />
+      </div>
+      <div className="p-2">
+        <h3 className="text-white text-sm font-medium truncate">
+          {person.name}
+        </h3>
+        <p className="text-gray-400 text-xs truncate">{person.character}</p>
+      </div>
     </div>
-    <div className="p-2">
-      <h3 className="text-white text-sm font-medium truncate">{person.name}</h3>
-      <p className="text-gray-400 text-xs truncate">{person.character}</p>
-    </div>
-  </div>
-)
+  )
+}
 
 function Details() {
   const { id, type } = useParams()
@@ -322,14 +328,16 @@ function Details() {
       {/* Hero Section with Backdrop */}
       <div className="relative">
         <div className="w-full h-[60vh] relative">
-          <img
-            src={details.backdrop || placeholderImg}
-            alt={details.title}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.target.src = placeholderImg
-            }}
-          />
+          {details.backdrop ? (
+            <img
+              src={details.backdrop}
+              alt={details.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            /* Gradient background as fallback */
+            <div className="w-full h-full bg-gradient-to-b from-[#1a1a1a] to-[#121212]"></div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#12121299] to-[#12121233]"></div>
           <button
             onClick={handleGoBack}
@@ -345,12 +353,9 @@ function Details() {
             {/* Poster */}
             <div className="w-[200px] md:w-[300px] shrink-0 mx-auto md:mx-0">
               <img
-                src={details.poster || placeholderImg}
+                src={details.poster}
                 alt={details.title}
                 className="w-full aspect-[2/3] object-cover rounded-md shadow-lg"
-                onError={(e) => {
-                  e.target.src = placeholderImg
-                }}
               />
             </div>
 

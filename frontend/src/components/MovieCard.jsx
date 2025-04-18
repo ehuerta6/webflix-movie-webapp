@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
-import placeholderImg from '../assets/movie-placeholder.png'
 
 function MovieCard({ movie }) {
   const { id, type = 'movie', title, poster, rating, genre, year } = movie
+
+  // If there's no poster, don't render the card
+  if (!poster) return null
 
   return (
     <Link
@@ -10,15 +12,7 @@ function MovieCard({ movie }) {
       className="block bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200 cursor-pointer h-full"
     >
       <div className="aspect-[2/3] relative">
-        <img
-          src={poster ? poster : placeholderImg}
-          alt={title}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            e.target.onerror = null
-            e.target.src = placeholderImg
-          }}
-        />
+        <img src={poster} alt={title} className="w-full h-full object-cover" />
         <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
           <span className="text-[#5ccfee]">{rating}</span>
         </div>
