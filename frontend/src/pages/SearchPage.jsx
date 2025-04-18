@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import placeholderImg from '../assets/profile-pic.jpg'
 import {
@@ -137,6 +137,12 @@ function SearchPage() {
   const [totalPages, setTotalPages] = useState(0)
   const [totalResults, setTotalResults] = useState(0)
   const ITEMS_PER_PAGE = 20
+
+  // Add new state variables for featured content
+  const [featured, setFeatured] = useState(null)
+  const [featuredItems, setFeaturedItems] = useState([])
+  const [currentFeaturedIndex, setCurrentFeaturedIndex] = useState(0)
+  const carouselTimerRef = useRef(null)
 
   // Helper function to validate if content has required information
   const isValidContent = (item) => {
@@ -459,6 +465,336 @@ function SearchPage() {
     navigate(-1) // Go back to the previous page in history
   }
 
+  // Format movie data for featured display
+  const formatMovieData = (movie) => ({
+    id: movie.id,
+    type: movie.media_type || 'movie',
+    title: movie.title || movie.name,
+    poster: movie.poster_path
+      ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+      : null,
+    backdrop: movie.backdrop_path
+      ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
+      : null,
+    rating: movie.vote_average.toFixed(1),
+    genre: movie.genre_ids
+      ? movie.genre_ids[0] && genreMap[movie.genre_ids[0]]
+        ? genreMap[movie.genre_ids[0]]
+        : 'Unknown'
+      : 'Unknown',
+    year:
+      movie.release_date || movie.first_air_date
+        ? (movie.release_date || movie.first_air_date).substring(0, 4)
+        : 'Unknown',
+    description: movie.overview,
+    genres: movie.genre_ids
+      ? movie.genre_ids.filter((id) => genreMap[id]).map((id) => genreMap[id])
+      : [],
+  })
+
+  // Function to rotate featured items
+  const rotateFeatured = useCallback(() => {
+    setCurrentFeaturedIndex((prevIndex) =>
+      prevIndex === featuredItems.length - 1 ? 0 : prevIndex + 1
+    )
+  }, [featuredItems.length])
+
+  // Set up automatic rotation
+  useEffect(() => {
+    if (featuredItems.length > 1) {
+      carouselTimerRef.current = setInterval(rotateFeatured, 8000) // Rotate every 8 seconds
+
+      return () => {
+        if (carouselTimerRef.current) {
+          clearInterval(carouselTimerRef.current)
+        }
+      }
+    }
+  }, [featuredItems.length, rotateFeatured])
+
+  // Function to manually change featured item
+  const changeFeaturedItem = (index) => {
+    // Reset the timer when manually changed
+    if (carouselTimerRef.current) {
+      clearInterval(carouselTimerRef.current)
+      carouselTimerRef.current = setInterval(rotateFeatured, 8000)
+    }
+    setCurrentFeaturedIndex(index)
+  }
+
+  // Update featured item when currentFeaturedIndex changes
+  useEffect(() => {
+    if (featuredItems.length > 0) {
+      setFeatured(featuredItems[currentFeaturedIndex])
+    }
+  }, [currentFeaturedIndex, featuredItems])
+
+  // Load featured content when the page loads
+  useEffect(() => {
+    const loadFeaturedContent = async () => {
+      try {
+        // Fetch trending content for featured section
+        const trendingData = await fetchTrending('all', 'day')
+
+        if (trendingData.results && trendingData.results.length > 0) {
+          // Filter valid content first
+          const validTrendingResults = trendingData.results.filter(
+            (item) =>
+              // Check for valid title/name
+              (item.title || item.name) &&
+              // Check for valid poster and backdrop
+              item.poster_path &&
+              item.backdrop_path &&
+              // Check for non-empty overview
+              item.overview &&
+              item.overview.trim() !== '' &&
+              // Check for defined release date
+              ((item.release_date && item.release_date.trim() !== '') ||
+                (item.first_air_date && item.first_air_date.trim() !== '')) &&
+              // Check for valid rating
+              typeof item.vote_average === 'number' &&
+              item.vote_average > 0
+          )
+
+          if (validTrendingResults.length > 0) {
+            // Use the first 5 valid trending items as featured content
+            const featuredItems = validTrendingResults
+              .slice(0, 5)
+              .map((item) => formatMovieData(item))
+
+            setFeaturedItems(featuredItems)
+            setFeatured(featuredItems[0]) // Set the first item as initial featured
+          }
+        }
+      } catch (err) {
+        console.error('Error loading featured content:', err)
+      }
+    }
+
+    // Only load featured content when there's no search query
+    if (!searchQuery && Object.keys(genreMap).length > 0) {
+      loadFeaturedContent()
+    }
+  }, [searchQuery, genreMap])
+
+  // Define CSS animation style for the carousel
+  const carouselAnimation = {
+    opacity: 1,
+    transition: 'opacity 600ms ease-in-out, transform 800ms ease-in-out',
+  }
+
+  // Featured component for the main highlight with carousel
+  const Featured = ({ movie }) => {
+    if (!movie) return null
+
+    // Function to go to the next item
+    const goToNext = (e) => {
+      e.preventDefault()
+      setCurrentFeaturedIndex((prevIndex) =>
+        prevIndex === featuredItems.length - 1 ? 0 : prevIndex + 1
+      )
+
+      // Reset timer
+      if (carouselTimerRef.current) {
+        clearInterval(carouselTimerRef.current)
+        carouselTimerRef.current = setInterval(rotateFeatured, 8000)
+      }
+    }
+
+    // Function to go to the previous item
+    const goToPrev = (e) => {
+      e.preventDefault()
+      setCurrentFeaturedIndex((prevIndex) =>
+        prevIndex === 0 ? featuredItems.length - 1 : prevIndex - 1
+      )
+
+      // Reset timer
+      if (carouselTimerRef.current) {
+        clearInterval(carouselTimerRef.current)
+        carouselTimerRef.current = setInterval(rotateFeatured, 8000)
+      }
+    }
+
+    return (
+      <section className="relative mb-10">
+        {/* Reduced height for the featured container on search page */}
+        <div className="w-full h-[300px] md:h-[400px] lg:h-[450px] relative overflow-hidden">
+          {/* Gradient overlay for better text visibility */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#121212]/80 via-transparent to-[#121212]/80 z-10"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#12121280] to-transparent z-10"></div>
+
+          {/* Background image with animation */}
+          <div
+            className="w-full h-full"
+            style={{
+              ...carouselAnimation,
+              position: 'relative',
+            }}
+          >
+            <img
+              key={movie.id} // Key helps React identify when to animate
+              src={movie.backdrop}
+              alt={movie.title}
+              className="w-full h-full object-cover transition-all duration-700 ease-out"
+              style={{
+                transform: 'scale(1.05)',
+                animation: 'fadeIn 800ms ease-in-out forwards',
+              }}
+              onError={(e) => {
+                e.target.onerror = null
+                e.target.src = placeholderImg
+              }}
+            />
+          </div>
+
+          {/* Content overlay with animation */}
+          <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-8 z-20">
+            <div className="max-w-4xl mx-auto w-full" style={carouselAnimation}>
+              <div className="flex items-center gap-2 mb-1 opacity-90">
+                <span className="rating-badge">{movie.rating}</span>
+                <span className="text-gray-300 text-sm">{movie.year}</span>
+                <span className="text-gray-300 text-sm hidden sm:inline">
+                  • {movie.genres && movie.genres.join(', ')}
+                </span>
+              </div>
+
+              <h1
+                className="text-xl md:text-2xl lg:text-3xl font-medium text-white mb-2"
+                key={`title-${movie.id}`}
+                style={{
+                  animation: 'slideUp 600ms ease-out forwards',
+                  textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                }}
+              >
+                {movie.title}
+              </h1>
+
+              <p
+                className="text-gray-300 text-xs md:text-sm leading-relaxed max-w-2xl mb-3 line-clamp-2 md:line-clamp-3"
+                key={`desc-${movie.id}`}
+                style={{
+                  animation: 'slideUp 700ms ease-out forwards',
+                  animationDelay: '100ms',
+                  opacity: 0,
+                }}
+              >
+                {movie.description}
+              </p>
+
+              <div
+                className="flex gap-3 mt-3"
+                key={`buttons-${movie.id}`}
+                style={{
+                  animation: 'slideUp 800ms ease-out forwards',
+                  animationDelay: '200ms',
+                  opacity: 0,
+                }}
+              >
+                <Link
+                  to={`/${movie.type}/${movie.id}`}
+                  className="primary-button flex items-center gap-1 cursor-pointer group text-sm py-1.5"
+                >
+                  <span className="transform transition-transform group-hover:scale-110">
+                    ▶
+                  </span>{' '}
+                  Watch
+                </Link>
+                <button className="secondary-button cursor-pointer flex items-center gap-1 hover:bg-[#5ccfee20] text-sm py-1.5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  Add to List
+                </button>
+              </div>
+
+              {/* Carousel indicators */}
+              {featuredItems.length > 1 && (
+                <div
+                  className="flex mt-4 gap-2"
+                  style={{
+                    animation: 'fadeIn 1s ease-out forwards',
+                    animationDelay: '300ms',
+                    opacity: 0,
+                  }}
+                >
+                  {featuredItems.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => changeFeaturedItem(index)}
+                      className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                        index === currentFeaturedIndex
+                          ? 'bg-[#5ccfee] w-4'
+                          : 'bg-gray-600 hover:bg-gray-500'
+                      }`}
+                      aria-label={`View featured item ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Navigation arrows */}
+          {featuredItems.length > 1 && (
+            <>
+              <button
+                onClick={goToPrev}
+                className="absolute left-2 md:left-6 top-1/2 transform -translate-y-1/2 z-30 bg-black/30 hover:bg-black/50 text-white p-1.5 rounded-full focus:outline-none transition-all duration-200 hover:scale-110"
+                aria-label="Previous featured item"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={goToNext}
+                className="absolute right-2 md:right-6 top-1/2 transform -translate-y-1/2 z-30 bg-black/30 hover:bg-black/50 text-white p-1.5 rounded-full focus:outline-none transition-all duration-200 hover:scale-110"
+                aria-label="Next featured item"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </>
+          )}
+        </div>
+      </section>
+    )
+  }
+
   return (
     <div className="bg-[#121212] min-h-screen pb-12">
       <div className="container mx-auto px-4 pt-8">
@@ -504,9 +840,9 @@ function SearchPage() {
           </div>
         </form>
 
-        {/* Minimalist Genre Bar - core genres only */}
+        {/* Minimalist Genre Bar - Moved above featured content */}
         {!searchQuery && genreList.length > 0 && (
-          <div className="mb-8 max-w-xl mx-auto">
+          <div className="mb-6 max-w-xl mx-auto">
             <div className="flex items-center flex-wrap gap-1.5">
               {genreList
                 // Filter for only popular/core genres
@@ -547,6 +883,9 @@ function SearchPage() {
             </div>
           </div>
         )}
+
+        {/* Featured Movie Display - Smaller height */}
+        {!searchQuery && featured && <Featured movie={featured} />}
 
         {/* Loading State for Search */}
         {loading && currentPage === 1 && (
