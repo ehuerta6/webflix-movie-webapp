@@ -3,37 +3,28 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import placeholderImg from '../assets/profile-pic.jpg'
 import { fetchMovieDetails, fetchShowDetails } from '../services/api'
 
-// Helper function to validate if a movie/show has all required fields
+// Helper function with simplified content validation
 const isValidContent = (item) => {
   if (!item) return false
 
-  // Basic content must have title, some image, and overview
   const hasBasics =
     (item.title || item.name) &&
     (item.poster_path || item.backdrop_path) &&
-    item.overview &&
-    item.overview.trim() !== '' &&
-    item.vote_average !== undefined &&
+    item.overview?.trim() &&
     item.vote_average > 0
 
-  // For similar content items, we need less strict validation
-  if (item.belongs_to_collection || item.similar) {
-    return hasBasics
-  }
+  // For similar content, only basic validation
+  if (item.belongs_to_collection || item.similar) return hasBasics
 
-  // Main content validation is more strict
-  // Movies need release date
+  // Type-specific validation
   if (item.media_type === 'movie' || !item.media_type) {
-    return hasBasics && item.release_date && item.release_date.trim() !== ''
+    return hasBasics && item.release_date?.trim()
   }
 
-  // TV shows need first air date and basic information
   if (item.media_type === 'tv') {
     return (
       hasBasics &&
-      item.first_air_date &&
-      item.first_air_date.trim() !== '' &&
-      // Ensure we have at least some episode information
+      item.first_air_date?.trim() &&
       (item.number_of_episodes !== undefined ||
         item.number_of_seasons !== undefined)
     )
@@ -42,9 +33,107 @@ const isValidContent = (item) => {
   return hasBasics
 }
 
+// Common genre map used for ID to name conversion
+const genreMap = {
+  28: 'Action',
+  12: 'Adventure',
+  16: 'Animation',
+  35: 'Comedy',
+  80: 'Crime',
+  99: 'Documentary',
+  18: 'Drama',
+  10751: 'Family',
+  14: 'Fantasy',
+  36: 'History',
+  27: 'Horror',
+  10402: 'Music',
+  9648: 'Mystery',
+  10749: 'Romance',
+  878: 'Science Fiction',
+  10770: 'TV Movie',
+  53: 'Thriller',
+  10752: 'War',
+  37: 'Western',
+  10759: 'Action & Adventure',
+  10762: 'Kids',
+  10763: 'News',
+  10764: 'Reality',
+  10765: 'Sci-Fi & Fantasy',
+  10766: 'Soap',
+  10767: 'Talk',
+  10768: 'War & Politics',
+}
+
+// Extract trailer URL helper function
+const getTrailerUrl = (videos) => {
+  if (!videos?.results?.length) return null
+
+  const trailer =
+    videos.results.find(
+      (video) => video.type === 'Trailer' && video.site === 'YouTube'
+    ) || videos.results[0]
+
+  return trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null
+}
+
+// Content Card component for reuse
+const ContentCard = ({ item, type }) => (
+  <Link
+    to={`/${type}/${item.id}`}
+    className="w-36 flex-shrink-0 bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200"
+  >
+    <div className="aspect-[2/3] relative">
+      <img
+        src={item.poster || placeholderImg}
+        alt={item.title}
+        className="w-full h-full object-cover"
+        onError={(e) => {
+          e.target.src = placeholderImg
+        }}
+      />
+      <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
+        <span className="text-[#5ccfee]">{item.rating}</span>
+      </div>
+      <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-[#5ccfee] font-medium truncate max-w-[70%]">
+            {item.genre}
+          </span>
+          <span className="text-xs text-gray-300">{item.year}</span>
+        </div>
+      </div>
+    </div>
+    <div className="p-2">
+      <h3 className="text-sm text-gray-200 font-medium truncate">
+        {item.title}
+      </h3>
+    </div>
+  </Link>
+)
+
+// Cast Card component for reuse
+const CastCard = ({ person }) => (
+  <div className="w-32 flex-shrink-0 bg-[#1e1e1e] rounded overflow-hidden">
+    <div className="w-full h-40 overflow-hidden">
+      <img
+        src={person.profile || placeholderImg}
+        alt={person.name}
+        className="w-full h-full object-cover object-center"
+        onError={(e) => {
+          e.target.src = placeholderImg
+        }}
+      />
+    </div>
+    <div className="p-2">
+      <h3 className="text-white text-sm font-medium truncate">{person.name}</h3>
+      <p className="text-gray-400 text-xs truncate">{person.character}</p>
+    </div>
+  </div>
+)
+
 function Details() {
-  const { id, type } = useParams() // type will be either 'movie' or 'tv'
-  const navigate = useNavigate() // Add useNavigate for going back
+  const { id, type } = useParams()
+  const navigate = useNavigate()
   const [details, setDetails] = useState(null)
   const [similarContent, setSimilarContent] = useState([])
   const [cast, setCast] = useState([])
@@ -57,45 +146,21 @@ function Details() {
       setError(null)
 
       try {
-        let data
-        let cast = []
-        let similar = []
+        // Fetch details based on content type
+        const fetchFunction =
+          type === 'movie' ? fetchMovieDetails : fetchShowDetails
+        const data = await fetchFunction(id)
 
-        // Fetch details based on content type (movie or tv)
-        if (type === 'movie') {
-          data = await fetchMovieDetails(id)
+        if (!data || data.status_code === 34) {
+          setError(`${type === 'movie' ? 'Movie' : 'TV show'} not found`)
+          setLoading(false)
+          return
+        }
 
-          if (!data || data.status_code === 34) {
-            setError('Movie not found')
-            setLoading(false)
-            return
-          }
-
-          if (!isValidContent(data)) {
-            setError(
-              'This movie has incomplete information and cannot be displayed'
-            )
-            setLoading(false)
-            return
-          }
-        } else if (type === 'tv') {
-          data = await fetchShowDetails(id)
-
-          if (!data || data.status_code === 34) {
-            setError('TV show not found')
-            setLoading(false)
-            return
-          }
-
-          if (!isValidContent(data)) {
-            setError(
-              'This TV show has incomplete information and cannot be displayed'
-            )
-            setLoading(false)
-            return
-          }
-        } else {
-          setError('Invalid content type')
+        if (!isValidContent(data)) {
+          setError(
+            `This ${type} has incomplete information and cannot be displayed`
+          )
           setLoading(false)
           return
         }
@@ -114,19 +179,17 @@ function Details() {
           rating: data.vote_average.toFixed(1),
           description: data.overview,
           year:
-            data.release_date || data.first_air_date
-              ? (data.release_date || data.first_air_date).substring(0, 4)
-              : 'Unknown',
+            (data.release_date || data.first_air_date)?.substring(0, 4) ||
+            'Unknown',
           runtime:
             data.runtime || (data.episode_run_time && data.episode_run_time[0]),
-          genres: data.genres ? data.genres.map((genre) => genre.name) : [],
+          genres: data.genres?.map((genre) => genre.name) || [],
           status: data.status,
           language: data.original_language,
           budget: data.budget ? `$${data.budget.toLocaleString()}` : 'N/A',
           revenue: data.revenue ? `$${data.revenue.toLocaleString()}` : 'N/A',
-          productionCompanies: data.production_companies
-            ? data.production_companies.map((company) => company.name)
-            : [],
+          productionCompanies:
+            data.production_companies?.map((company) => company.name) || [],
           trailer: getTrailerUrl(data.videos),
           number_of_seasons: data.number_of_seasons,
           number_of_episodes: data.number_of_episodes,
@@ -135,7 +198,7 @@ function Details() {
         setDetails(formattedDetails)
 
         // Extract cast information
-        if (data.credits && data.credits.cast) {
+        if (data.credits?.cast?.length) {
           const formattedCast = data.credits.cast
             .slice(0, 10)
             .map((person) => ({
@@ -150,21 +213,16 @@ function Details() {
           setCast(formattedCast)
         }
 
-        // Extract similar content and filter out incomplete items
-        if (data.similar && data.similar.results) {
-          // Filter out incomplete similar content items
-          similar = data.similar.results
-            .filter((item) => {
-              // Basic validation for similar content
-              return (
+        // Extract similar content
+        if (data.similar?.results?.length) {
+          const similar = data.similar.results
+            .filter(
+              (item) =>
                 (item.title || item.name) &&
                 item.poster_path &&
-                item.overview &&
-                item.overview.trim() !== '' &&
-                item.vote_average !== undefined &&
+                item.overview?.trim() &&
                 item.vote_average > 0
-              )
-            })
+            )
             .slice(0, 15)
             .map((item) => ({
               id: item.id,
@@ -172,7 +230,7 @@ function Details() {
               poster: item.poster_path
                 ? `https://image.tmdb.org/t/p/w342${item.poster_path}`
                 : null,
-              rating: item.vote_average ? item.vote_average.toFixed(1) : 'N/A',
+              rating: item.vote_average?.toFixed(1) || 'N/A',
               year:
                 type === 'movie'
                   ? item.release_date
@@ -181,14 +239,13 @@ function Details() {
                   : item.first_air_date
                   ? item.first_air_date.split('-')[0]
                   : 'N/A',
-              genre:
-                item.genre_ids && item.genre_ids.length > 0
-                  ? getGenreName(item.genre_ids[0])
-                  : 'N/A',
+              genre: item.genre_ids?.length
+                ? genreMap[item.genre_ids[0]] || 'N/A'
+                : 'N/A',
             }))
-        }
 
-        setSimilarContent(similar)
+          setSimilarContent(similar)
+        }
       } catch (err) {
         console.error('Error fetching details:', err)
         setError(`Failed to load ${type} details. Please try again later.`)
@@ -200,61 +257,15 @@ function Details() {
     fetchDetails()
   }, [id, type])
 
-  // Helper function to extract trailer URL
-  const getTrailerUrl = (videos) => {
-    if (!videos || !videos.results || videos.results.length === 0) {
-      return null
-    }
-
-    // Find official trailer if available
-    const trailer =
-      videos.results.find(
-        (video) => video.type === 'Trailer' && video.site === 'YouTube'
-      ) || videos.results[0]
-
-    return trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null
+  // Format runtime for display
+  const formatRuntime = (minutes) => {
+    if (!minutes) return ''
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return hours > 0 ? `${hours}h ${mins > 0 ? `${mins}m` : ''}` : `${minutes}m`
   }
 
-  // Helper function to convert genre ID to name (simplified)
-  const getGenreName = (genreId) => {
-    // Common genre map (simplified)
-    const genreMap = {
-      28: 'Action',
-      12: 'Adventure',
-      16: 'Animation',
-      35: 'Comedy',
-      80: 'Crime',
-      99: 'Documentary',
-      18: 'Drama',
-      10751: 'Family',
-      14: 'Fantasy',
-      36: 'History',
-      27: 'Horror',
-      10402: 'Music',
-      9648: 'Mystery',
-      10749: 'Romance',
-      878: 'Science Fiction',
-      10770: 'TV Movie',
-      53: 'Thriller',
-      10752: 'War',
-      37: 'Western',
-      10759: 'Action & Adventure',
-      10762: 'Kids',
-      10763: 'News',
-      10764: 'Reality',
-      10765: 'Sci-Fi & Fantasy',
-      10766: 'Soap',
-      10767: 'Talk',
-      10768: 'War & Politics',
-    }
-
-    return genreMap[genreId] || 'Unknown'
-  }
-
-  // Go back to previous page
-  const handleGoBack = () => {
-    navigate(-1) // Go back to the previous page in history
-  }
+  const handleGoBack = () => navigate(-1)
 
   if (loading) {
     return (
@@ -283,14 +294,13 @@ function Details() {
     )
   }
 
-  // Filter out incomplete details
+  // Only continue if we have sufficient details
   if (
-    !details ||
-    !details.poster ||
-    !details.description ||
-    !details.year ||
-    !details.rating ||
-    (type === 'movie' && !details.runtime)
+    !details?.poster ||
+    !details?.description ||
+    !details?.year ||
+    !details?.rating ||
+    (type === 'movie' && !details?.runtime)
   ) {
     return (
       <div className="flex justify-center items-center h-[80vh] text-white">
@@ -312,21 +322,15 @@ function Details() {
       {/* Hero Section with Backdrop */}
       <div className="relative">
         <div className="w-full h-[60vh] relative">
-          {/* Backdrop Image */}
           <img
-            src={details.backdrop ? details.backdrop : placeholderImg}
+            src={details.backdrop || placeholderImg}
             alt={details.title}
             className="w-full h-full object-cover"
             onError={(e) => {
-              e.target.onerror = null
               e.target.src = placeholderImg
             }}
           />
-
-          {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#12121299] to-[#12121233]"></div>
-
-          {/* Back Button */}
           <button
             onClick={handleGoBack}
             className="absolute top-4 left-4 z-10 flex items-center gap-1.5 text-white bg-black/50 hover:bg-black/70 px-3 py-1.5 rounded-md transition-colors text-sm"
@@ -335,17 +339,16 @@ function Details() {
           </button>
         </div>
 
-        {/* Movie Details Card - Overlapping the hero section */}
+        {/* Details Card */}
         <div className="relative -mt-56 z-10 mx-auto max-w-screen-xl px-4">
           <div className="flex flex-col md:flex-row gap-6">
             {/* Poster */}
             <div className="w-[200px] md:w-[300px] shrink-0 mx-auto md:mx-0">
               <img
-                src={details.poster ? details.poster : placeholderImg}
+                src={details.poster || placeholderImg}
                 alt={details.title}
                 className="w-full aspect-[2/3] object-cover rounded-md shadow-lg"
                 onError={(e) => {
-                  e.target.onerror = null
                   e.target.src = placeholderImg
                 }}
               />
@@ -360,7 +363,6 @@ function Details() {
                 <span className="text-gray-400 text-lg">{details.year}</span>
               </div>
 
-              {/* Tagline */}
               {details.tagline && (
                 <p className="text-[#5ccfee] italic mt-1 mb-4">
                   {details.tagline}
@@ -377,28 +379,19 @@ function Details() {
                 </div>
 
                 <div className="w-px h-5 bg-gray-700"></div>
-
                 <div className="text-gray-300 text-sm">
                   {details.genres.join(', ')}
                 </div>
 
-                {/* Movie runtime */}
                 {type === 'movie' && details.runtime && (
                   <>
                     <div className="w-px h-5 bg-gray-700"></div>
                     <div className="text-gray-300 text-sm">
-                      {Math.floor(details.runtime / 60) > 0
-                        ? `${Math.floor(details.runtime / 60)}h ${
-                            details.runtime % 60 > 0
-                              ? `${details.runtime % 60}m`
-                              : ''
-                          }`
-                        : `${details.runtime}m`}
+                      {formatRuntime(details.runtime)}
                     </div>
                   </>
                 )}
 
-                {/* TV show details */}
                 {type === 'tv' && (
                   <>
                     {details.number_of_seasons && (
@@ -486,7 +479,6 @@ function Details() {
                       <h3 className="text-gray-400 mb-1">Budget</h3>
                       <p className="text-white">{details.budget}</p>
                     </div>
-
                     <div>
                       <h3 className="text-gray-400 mb-1">Revenue</h3>
                       <p className="text-white">{details.revenue}</p>
@@ -523,32 +515,7 @@ function Details() {
         <div className="overflow-x-auto pb-4 -mx-4 px-4">
           <div className="flex space-x-4" style={{ minWidth: 'max-content' }}>
             {cast.length > 0 ? (
-              cast.map((person) => (
-                <div
-                  key={person.id}
-                  className="w-32 flex-shrink-0 bg-[#1e1e1e] rounded overflow-hidden"
-                >
-                  <div className="w-full h-40 overflow-hidden">
-                    <img
-                      src={person.profile ? person.profile : placeholderImg}
-                      alt={person.name}
-                      className="w-full h-full object-cover object-center"
-                      onError={(e) => {
-                        e.target.onerror = null
-                        e.target.src = placeholderImg
-                      }}
-                    />
-                  </div>
-                  <div className="p-2">
-                    <h3 className="text-white text-sm font-medium truncate">
-                      {person.name}
-                    </h3>
-                    <p className="text-gray-400 text-xs truncate">
-                      {person.character}
-                    </p>
-                  </div>
-                </div>
-              ))
+              cast.map((person) => <CastCard key={person.id} person={person} />)
             ) : (
               <p className="text-gray-400">No cast information available.</p>
             )}
@@ -568,43 +535,7 @@ function Details() {
               style={{ minWidth: 'max-content' }}
             >
               {similarContent.map((item) => (
-                <Link
-                  key={item.id}
-                  to={`/${type}/${item.id}`}
-                  className="w-36 flex-shrink-0 bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200"
-                >
-                  <div className="aspect-[2/3] relative">
-                    <img
-                      src={item.poster ? item.poster : placeholderImg}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.onerror = null
-                        e.target.src = placeholderImg
-                      }}
-                    />
-                    <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
-                      <span className="text-[#5ccfee]">{item.rating}</span>
-                    </div>
-
-                    {/* Genre badge */}
-                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-[#5ccfee] font-medium truncate max-w-[70%]">
-                          {item.genre}
-                        </span>
-                        <span className="text-xs text-gray-300">
-                          {item.year}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-2">
-                    <h3 className="text-sm text-gray-200 font-medium truncate">
-                      {item.title}
-                    </h3>
-                  </div>
-                </Link>
+                <ContentCard key={item.id} item={item} type={type} />
               ))}
             </div>
           </div>
