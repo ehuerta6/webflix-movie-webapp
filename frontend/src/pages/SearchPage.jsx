@@ -454,9 +454,24 @@ function SearchPage() {
     }
   }
 
+  // Go back to previous page
+  const handleGoBack = () => {
+    navigate(-1) // Go back to the previous page in history
+  }
+
   return (
     <div className="bg-[#121212] min-h-screen pb-12">
       <div className="container mx-auto px-4 pt-8">
+        {/* Go Back Button */}
+        <div className="mb-4">
+          <button
+            onClick={handleGoBack}
+            className="flex items-center gap-1.5 text-white bg-[#1e1e1e] hover:bg-[#2e2e2e] px-3 py-1.5 rounded-md transition-colors text-sm"
+          >
+            <span className="text-sm">←</span> Go Back
+          </button>
+        </div>
+
         {/* Search Form */}
         <form onSubmit={handleSearch} className="mb-6">
           <div className="relative max-w-xl mx-auto">
@@ -489,22 +504,42 @@ function SearchPage() {
           </div>
         </form>
 
-        {/* Genre suggestions moved to top */}
+        {/* Minimalist Genre Bar - core genres only */}
         {!searchQuery && genreList.length > 0 && (
-          <div className="mb-10 py-4 border-y border-gray-800">
-            <h2 className="text-white mb-4 text-lg font-medium">
-              Explore by genre
-            </h2>
-            <div className="flex flex-wrap gap-2">
+          <div className="mb-8 max-w-xl mx-auto">
+            <div className="flex items-center flex-wrap gap-1.5">
               {genreList
+                // Filter for only popular/core genres
+                .filter(
+                  (genre) =>
+                    genre.id > 0 &&
+                    genre.name &&
+                    genre.name.trim() !== '' &&
+                    ![
+                      'Foreign',
+                      'TV Movie',
+                      'News',
+                      'Documentary',
+                      'War',
+                      'Western',
+                      'History',
+                      'Music',
+                      'Reality',
+                      'Soap',
+                      'Talk',
+                      'War & Politics',
+                    ].includes(genre.name)
+                )
+                // Sort alphabetically and limit to 12 core genres
                 .sort((a, b) => a.name.localeCompare(b.name))
+                .slice(0, 12)
                 .map((genre) => (
                   <button
                     key={genre.id}
                     onClick={() =>
                       navigate(`/search?q=${encodeURIComponent(genre.name)}`)
                     }
-                    className="px-3 py-1.5 bg-[#1e1e1e] hover:bg-[#2e2e2e] text-gray-300 text-sm rounded-md border border-gray-700 transition-colors duration-200"
+                    className="px-2 py-0.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-gray-400 hover:text-white text-xs rounded transition-colors duration-200"
                   >
                     {genre.name}
                   </button>

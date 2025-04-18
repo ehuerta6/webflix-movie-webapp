@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import placeholderImg from '../assets/profile-pic.jpg'
 import { fetchMovieDetails, fetchShowDetails } from '../services/api'
 
@@ -44,6 +44,7 @@ const isValidContent = (item) => {
 
 function Details() {
   const { id, type } = useParams() // type will be either 'movie' or 'tv'
+  const navigate = useNavigate() // Add useNavigate for going back
   const [details, setDetails] = useState(null)
   const [similarContent, setSimilarContent] = useState([])
   const [cast, setCast] = useState([])
@@ -164,7 +165,7 @@ function Details() {
                 item.vote_average > 0
               )
             })
-            .slice(0, 6)
+            .slice(0, 15)
             .map((item) => ({
               id: item.id,
               title: type === 'movie' ? item.title : item.name,
@@ -250,6 +251,11 @@ function Details() {
     return genreMap[genreId] || 'Unknown'
   }
 
+  // Go back to previous page
+  const handleGoBack = () => {
+    navigate(-1) // Go back to the previous page in history
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[80vh] text-white">
@@ -321,12 +327,12 @@ function Details() {
           <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#12121299] to-[#12121233]"></div>
 
           {/* Back Button */}
-          <Link
-            to="/"
-            className="absolute top-4 left-4 z-10 flex items-center gap-1 text-white bg-black/50 hover:bg-black/70 px-3 py-1.5 rounded-full transition-colors"
+          <button
+            onClick={handleGoBack}
+            className="absolute top-4 left-4 z-10 flex items-center gap-1.5 text-white bg-black/50 hover:bg-black/70 px-3 py-1.5 rounded-md transition-colors text-sm"
           >
-            <span>←</span> Back
-          </Link>
+            <span className="text-sm">←</span> Go Back
+          </button>
         </div>
 
         {/* Movie Details Card - Overlapping the hero section */}
@@ -554,15 +560,18 @@ function Details() {
       {similarContent.length > 0 && (
         <div className="mx-auto max-w-screen-xl px-4 mt-12">
           <h2 className="text-xl text-white mb-4">
-            Similar {type === 'movie' ? 'Movies' : 'Shows'}
+            Recommended {type === 'movie' ? 'Movies' : 'Shows'}
           </h2>
           <div className="overflow-x-auto pb-4 -mx-4 px-4">
-            <div className="flex space-x-4" style={{ minWidth: 'max-content' }}>
+            <div
+              className="flex space-x-4 scroll-smooth"
+              style={{ minWidth: 'max-content' }}
+            >
               {similarContent.map((item) => (
                 <Link
                   key={item.id}
                   to={`/${type}/${item.id}`}
-                  className="w-40 flex-shrink-0 bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200"
+                  className="w-36 flex-shrink-0 bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200"
                 >
                   <div className="aspect-[2/3] relative">
                     <img
@@ -581,7 +590,7 @@ function Details() {
                     {/* Genre badge */}
                     <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-[#5ccfee] font-medium">
+                        <span className="text-xs text-[#5ccfee] font-medium truncate max-w-[70%]">
                           {item.genre}
                         </span>
                         <span className="text-xs text-gray-300">

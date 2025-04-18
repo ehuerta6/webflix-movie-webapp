@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import profilePic from '../assets/profile-pic.jpg'
 
 function User() {
+  const navigate = useNavigate()
+
   // Mock user data
   const [userData, setUserData] = useState({
     name: 'Jane Smith',
@@ -135,6 +138,11 @@ function User() {
     },
   ]
 
+  // Go back to previous page
+  const handleGoBack = () => {
+    navigate(-1) // Go back to the previous page in history
+  }
+
   // Handler functions
   const handleProfileEdit = () => {
     setEditForm({
@@ -212,8 +220,18 @@ function User() {
   return (
     <div className="min-h-screen bg-[#121212] text-white py-4 px-3">
       <div className="max-w-5xl mx-auto space-y-4">
-        {/* Page Title */}
-        <h1 className="text-2xl font-bold">User Profile</h1>
+        {/* Header with Back Button and Page Title */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleGoBack}
+              className="flex items-center gap-1.5 text-white bg-[#1e1e1e] hover:bg-[#2e2e2e] px-3 py-1.5 rounded-md transition-colors text-sm"
+            >
+              <span className="text-sm">←</span> Go Back
+            </button>
+            <h1 className="text-2xl font-bold">User Profile</h1>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 gap-4">
           {/* Container 1: User Info & About */}

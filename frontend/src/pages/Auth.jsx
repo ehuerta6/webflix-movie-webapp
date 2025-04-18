@@ -20,6 +20,11 @@ function Auth() {
 
   const navigate = useNavigate()
 
+  // Go back to previous page
+  const handleGoBack = () => {
+    navigate(-1) // Go back to the previous page in history
+  }
+
   // Validate login form
   const validateLoginForm = () => {
     const errors = {}
@@ -107,6 +112,16 @@ function Auth() {
   return (
     <div className="min-h-screen bg-[#121212] text-white px-4 py-4">
       <div className="max-w-6xl mx-auto">
+        {/* Back Button */}
+        <div className="mb-4">
+          <button
+            onClick={handleGoBack}
+            className="flex items-center gap-1.5 text-white bg-[#1e1e1e] hover:bg-[#2e2e2e] px-3 py-1.5 rounded-md transition-colors text-sm"
+          >
+            <span className="text-sm">←</span> Go Back
+          </button>
+        </div>
+
         {/* Page Title */}
         <h1 className="text-white text-2xl font-semibold text-center mb-6">
           Account Access / Login
