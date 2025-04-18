@@ -1095,83 +1095,79 @@ function ResultCard({ item }) {
     return (
       <Link
         to={`/person/${item.id}`}
-        className="bg-[#1e1e1e] rounded-md overflow-hidden hover:translate-y-[-2px] transition-transform duration-200"
+        className="block bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200 cursor-pointer h-full"
       >
-        <div className="flex h-full flex-col">
-          <div className="w-full h-24 overflow-hidden relative">
-            {!imageLoaded && (
-              <div className="absolute inset-0 bg-[#333] flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            )}
-            <img
-              src={`https://image.tmdb.org/t/p/w185${item.posterPath}`}
-              alt={item.title}
-              className={`w-full h-full object-cover object-top transition-opacity duration-300 ${
-                imageLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-              onLoad={() => setImageLoaded(true)}
-              loading="lazy"
-            />
-          </div>
-          <div className="p-1.5 flex-1">
-            <h3 className="text-white text-xs font-medium mb-0.5 line-clamp-1">
-              {item.title}
-            </h3>
-            <p className="text-[#5ccfee] text-[10px] mb-0.5">{item.knownFor}</p>
-            {item.knownForTitles && (
-              <p className="text-gray-400 text-[10px] line-clamp-1">
-                {item.knownForTitles}
-              </p>
-            )}
-          </div>
+        <div className="w-full h-40 overflow-hidden relative">
+          {!imageLoaded && (
+            <div className="absolute inset-0 bg-[#333] flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
+          <img
+            src={`https://image.tmdb.org/t/p/w185${item.posterPath}`}
+            alt={item.title}
+            className={`w-full h-full object-cover object-top transition-opacity duration-300 ${
+              imageLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+            onLoad={() => setImageLoaded(true)}
+            loading="lazy"
+          />
+        </div>
+        <div className="p-2">
+          <h3 className="text-sm text-gray-200 font-medium truncate">
+            {item.title}
+          </h3>
+          <p className="text-[#5ccfee] text-xs">{item.knownFor}</p>
+          {item.knownForTitles && (
+            <p className="text-gray-400 text-xs line-clamp-1 mt-0.5">
+              {item.knownForTitles}
+            </p>
+          )}
         </div>
       </Link>
     )
   }
 
-  // Movie or TV Show card (more compact)
+  // Movie or TV Show card
   // Skip rendering if no poster path
   if (!item.posterPath) return null
-
-  const [movieImageLoaded, setMovieImageLoaded] = useState(false)
 
   return (
     <Link
       to={`/${item.type}/${item.id}`}
-      className="bg-[#1e1e1e] rounded-md overflow-hidden hover:translate-y-[-2px] transition-transform duration-200"
+      className="block bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200 cursor-pointer h-full"
     >
       <div className="aspect-[2/3] relative">
-        {!movieImageLoaded && (
+        {!imageLoaded && (
           <div className="absolute inset-0 bg-[#333] flex items-center justify-center">
-            <div className="w-6 h-6 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-8 h-8 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
           </div>
         )}
         <img
-          src={`https://image.tmdb.org/t/p/w185${item.posterPath}`}
+          src={`https://image.tmdb.org/t/p/w342${item.posterPath}`}
           alt={item.title}
           className={`w-full h-full object-cover transition-opacity duration-300 ${
-            movieImageLoaded ? 'opacity-100' : 'opacity-0'
+            imageLoaded ? 'opacity-100' : 'opacity-0'
           }`}
-          onLoad={() => setMovieImageLoaded(true)}
+          onLoad={() => setImageLoaded(true)}
           loading="lazy"
         />
         {item.rating && (
-          <div className="absolute top-0 right-0 bg-black/60 px-1 py-0.5 m-0.5 rounded text-[10px]">
+          <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
             <span className="text-[#5ccfee]">{item.rating}</span>
           </div>
         )}
-        <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black to-transparent">
+        <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] text-[#5ccfee] font-medium truncate max-w-[70%]">
+            <span className="text-xs text-[#5ccfee] font-medium truncate max-w-[70%]">
               {item.genre}
             </span>
-            <span className="text-[10px] text-gray-300">{item.year}</span>
+            <span className="text-xs text-gray-300">{item.year}</span>
           </div>
         </div>
       </div>
-      <div className="p-1.5">
-        <h3 className="text-white text-xs font-medium line-clamp-1">
+      <div className="p-2">
+        <h3 className="text-sm text-gray-200 font-medium truncate">
           {item.title}
         </h3>
       </div>

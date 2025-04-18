@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import profilePic from '../assets/profile-pic.jpg'
-import moviePlaceholder from '../assets/movie-placeholder.png'
 import { fetchMovies, fetchGenres, fetchTrending } from '../services/api'
 
 // Helper function to validate movie data
@@ -22,7 +21,7 @@ const formatMovieData = (movie, genreMap = {}) => {
     title: movie.title || movie.name,
     poster: movie.poster_path
       ? `https://image.tmdb.org/t/p/w342${movie.poster_path}`
-      : moviePlaceholder,
+      : 'https://via.placeholder.com/342x513?text=No+Image',
     year:
       movie.release_date || movie.first_air_date
         ? new Date(movie.release_date || movie.first_air_date).getFullYear()
@@ -37,29 +36,31 @@ const formatMovieData = (movie, genreMap = {}) => {
 
 // MovieCard component for reuse in different collections
 const MovieCard = ({ movie, actions }) => (
-  <div className="w-36 bg-[#252525] rounded overflow-hidden flex-shrink-0">
+  <div className="bg-[#1e1e1e] rounded overflow-hidden flex-shrink-0 hover:translate-y-[-4px] transition-transform duration-200 w-36">
     <div className="w-full h-48 relative">
       <img
         src={movie.poster}
         alt={movie.title}
         className="w-full h-full object-cover"
         onError={(e) => {
-          e.target.src = moviePlaceholder
+          e.target.src = 'https://via.placeholder.com/342x513?text=No+Image'
         }}
       />
-      <div className="absolute top-1 right-1 bg-black bg-opacity-70 text-yellow-400 text-xs font-bold px-1.5 py-0.5 rounded">
-        {movie.rating}
-      </div>
+      {movie.rating && (
+        <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
+          <span className="text-[#5ccfee]">{movie.rating}</span>
+        </div>
+      )}
       {movie.genre && (
-        <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black to-transparent">
-          <span className="text-xs px-1.5 py-0.5 bg-[#5ccfee] bg-opacity-20 text-white rounded-full font-bold">
+        <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
+          <span className="text-xs text-[#5ccfee] font-medium truncate max-w-[70%]">
             {movie.genre}
           </span>
         </div>
       )}
     </div>
     <div className="p-2">
-      <h4 className="font-medium text-white text-xs mb-0.5 truncate">
+      <h4 className="font-medium text-gray-200 text-sm mb-0.5 truncate">
         {movie.title}
       </h4>
       <p className="text-gray-400 text-xs">{movie.year}</p>
@@ -85,13 +86,11 @@ const GenreToggle = ({ genre, selected, onToggle }) => (
 
 // Stat component for user statistics
 const StatItem = ({ icon, label, value }) => (
-  <div className="bg-[#252525] p-3 rounded">
-    <div className="flex items-center">
-      {icon}
-      <div>
-        <p className="text-gray-400 text-xs">{label}</p>
-        <p className="text-base font-bold">{value}</p>
-      </div>
+  <div className="bg-[#1e1e1e] p-2 rounded flex items-center">
+    {icon}
+    <div>
+      <p className="text-gray-400 text-xs leading-tight">{label}</p>
+      <p className="text-sm font-bold leading-tight">{value}</p>
     </div>
   </div>
 )
@@ -152,21 +151,21 @@ function User() {
       {
         id: 1,
         title: 'Inception',
-        poster: moviePlaceholder,
+        poster: 'https://via.placeholder.com/342x513?text=Inception',
         year: 2010,
         rating: 8.8,
       },
       {
         id: 2,
         title: 'The Shawshank Redemption',
-        poster: moviePlaceholder,
+        poster: 'https://via.placeholder.com/342x513?text=Shawshank',
         year: 1994,
         rating: 9.3,
       },
       {
         id: 3,
         title: 'The Dark Knight',
-        poster: moviePlaceholder,
+        poster: 'https://via.placeholder.com/342x513?text=Dark+Knight',
         year: 2008,
         rating: 9.0,
       },
@@ -175,21 +174,21 @@ function User() {
       {
         id: 4,
         title: 'Pulp Fiction',
-        poster: moviePlaceholder,
+        poster: 'https://via.placeholder.com/342x513?text=Pulp+Fiction',
         year: 1994,
         rating: 8.9,
       },
       {
         id: 5,
         title: 'The Godfather',
-        poster: moviePlaceholder,
+        poster: 'https://via.placeholder.com/342x513?text=Godfather',
         year: 1972,
         rating: 9.2,
       },
       {
         id: 6,
         title: 'Interstellar',
-        poster: moviePlaceholder,
+        poster: 'https://via.placeholder.com/342x513?text=Interstellar',
         year: 2014,
         rating: 8.6,
       },
@@ -198,7 +197,7 @@ function User() {
       {
         id: 7,
         title: 'Blade Runner 2049',
-        poster: moviePlaceholder,
+        poster: 'https://via.placeholder.com/342x513?text=Blade+Runner',
         year: 2017,
         rating: 8.0,
         genre: 'Sci-Fi',
@@ -206,7 +205,7 @@ function User() {
       {
         id: 8,
         title: 'The Departed',
-        poster: moviePlaceholder,
+        poster: 'https://via.placeholder.com/342x513?text=Departed',
         year: 2006,
         rating: 8.5,
         genre: 'Drama',
@@ -214,7 +213,7 @@ function User() {
       {
         id: 9,
         title: 'John Wick',
-        poster: moviePlaceholder,
+        poster: 'https://via.placeholder.com/342x513?text=John+Wick',
         year: 2014,
         rating: 7.4,
         genre: 'Action',
@@ -679,14 +678,16 @@ function User() {
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-bold">{userData.name}</h3>
+                    <h3 className="text-xl font-bold text-gray-200">
+                      {userData.name}
+                    </h3>
                     <p className="text-gray-400 text-sm line-clamp-2">
                       {userData.bio}
                     </p>
                     <div className="flex space-x-2 mt-2">
                       <button
                         onClick={handleProfileEdit}
-                        className="inline-flex items-center px-3 py-1 bg-[#252525] hover:bg-[#333] text-xs rounded transition duration-200"
+                        className="inline-flex items-center px-3 py-1 bg-[#1e1e1e] hover:bg-[#333] text-xs rounded transition duration-200"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -700,7 +701,7 @@ function User() {
                       </button>
                       <button
                         onClick={handleSettingsToggle}
-                        className="inline-flex items-center px-3 py-1 bg-[#252525] hover:bg-[#333] text-xs rounded transition duration-200"
+                        className="inline-flex items-center px-3 py-1 bg-[#1e1e1e] hover:bg-[#333] text-xs rounded transition duration-200"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -726,7 +727,7 @@ function User() {
             {isSettingsOpen && (
               <div className="border-t border-[#2a2a2a] p-4">
                 <form onSubmit={handleSettingsSubmit} className="space-y-3">
-                  <h3 className="text-sm font-semibold mb-2">
+                  <h3 className="text-sm font-semibold mb-2 text-gray-200">
                     Account Settings
                   </h3>
 
@@ -804,13 +805,13 @@ function User() {
 
           {/* User Stats */}
           <div className="bg-[#1e1e1e] rounded-lg shadow-md overflow-hidden border border-[#2a2a2a]">
-            <div className="p-4">
-              <div className="grid grid-cols-3 gap-3 mb-3">
+            <div className="p-3">
+              <div className="grid grid-cols-3 gap-2 mb-2">
                 <StatItem
                   icon={
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 text-[#5ccfee] mr-2"
+                      className="h-3.5 w-3.5 text-[#5ccfee] mr-1.5"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -831,7 +832,7 @@ function User() {
                   icon={
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 text-[#5ccfee] mr-2"
+                      className="h-3.5 w-3.5 text-[#5ccfee] mr-1.5"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -852,7 +853,7 @@ function User() {
                   icon={
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 text-[#5ccfee] mr-2"
+                      className="h-3.5 w-3.5 text-[#5ccfee] mr-1.5"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -871,21 +872,21 @@ function User() {
               </div>
 
               {/* Favorite Genres */}
-              <div>
-                <h4 className="text-xs font-semibold mb-2 text-gray-400">
-                  Favorite Genres
-                </h4>
-                <div className="flex flex-wrap gap-1">
+              <div className="flex items-center">
+                <div className="text-xs font-medium text-gray-400 mr-2 whitespace-nowrap">
+                  Favorite Genres:
+                </div>
+                <div className="flex flex-wrap gap-1 flex-1 min-w-0">
                   {loading.genres ? (
-                    <div className="flex items-center text-gray-400 text-xs py-1">
-                      <div className="animate-spin h-3 w-3 border-b border-[#5ccfee] rounded-full mr-2"></div>
+                    <div className="flex items-center text-gray-400 text-xs py-0.5">
+                      <div className="animate-spin h-3 w-3 border-b border-[#5ccfee] rounded-full mr-1"></div>
                       Loading...
                     </div>
                   ) : userData.favoriteGenres.length > 0 ? (
                     userData.favoriteGenres.map((genre, index) => (
                       <span
                         key={index}
-                        className="px-2 py-0.5 bg-[#5ccfee] bg-opacity-20 text-white rounded-full text-xs font-bold"
+                        className="px-1.5 py-0.5 bg-[#5ccfee] bg-opacity-20 text-white rounded-full text-xs font-medium"
                       >
                         {genre}
                       </span>
@@ -902,27 +903,91 @@ function User() {
 
           {/* Movie Collections */}
           <div className="bg-[#1e1e1e] rounded-lg shadow-md overflow-hidden border border-[#2a2a2a]">
-            <div className="p-4 space-y-4">
-              {renderMovieCollection(
-                likedMovies,
-                'Liked Movies',
-                collectionActions.liked,
-                loading.liked
-              )}
+            <div className="p-4 space-y-6">
+              {/* Render collections with updated styles */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3 text-gray-200">
+                  Liked Movies
+                </h3>
+                {loading.liked ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5ccfee]"></div>
+                  </div>
+                ) : likedMovies.length > 0 ? (
+                  <div className="overflow-x-auto pb-2">
+                    <div className="flex space-x-3 min-w-max">
+                      {likedMovies.map((movie) => (
+                        <MovieCard
+                          key={movie.id}
+                          movie={movie}
+                          actions={collectionActions.liked(movie)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-gray-400 text-sm py-4 text-center">
+                    No liked movies found
+                  </div>
+                )}
+              </div>
 
-              {renderMovieCollection(
-                watchlistMovies,
-                'Watchlist',
-                collectionActions.watchlist,
-                loading.watchlist
-              )}
+              <div>
+                <h3 className="text-sm font-semibold mb-3 text-gray-200">
+                  Watchlist
+                </h3>
+                {loading.watchlist ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5ccfee]"></div>
+                  </div>
+                ) : watchlistMovies.length > 0 ? (
+                  <div className="overflow-x-auto pb-2">
+                    <div className="flex space-x-3 min-w-max">
+                      {watchlistMovies.map((movie) => (
+                        <MovieCard
+                          key={movie.id}
+                          movie={movie}
+                          actions={collectionActions.watchlist(movie)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-gray-400 text-sm py-4 text-center">
+                    No movies in watchlist
+                  </div>
+                )}
+              </div>
 
-              {renderMovieCollection(
-                recommendedMovies,
-                'Recommended For You',
-                collectionActions.recommendations,
-                loading.recommendations
-              )}
+              <div>
+                <h3 className="text-sm font-semibold mb-3 text-gray-200">
+                  Recommended For You
+                </h3>
+                <p className="text-gray-400 text-xs mb-3">
+                  Based on your favorite genres
+                </p>
+                {loading.recommendations ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5ccfee]"></div>
+                  </div>
+                ) : recommendedMovies.length > 0 ? (
+                  <div className="overflow-x-auto pb-2">
+                    <div className="flex space-x-3 min-w-max">
+                      {recommendedMovies.map((movie) => (
+                        <MovieCard
+                          key={movie.id}
+                          movie={movie}
+                          actions={collectionActions.recommendations(movie)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-gray-400 text-sm py-4 text-center">
+                    Select favorite genres to get recommendations
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
