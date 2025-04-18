@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import profilePic from '../assets/profile-pic.jpg'
-import { fetchMovies, fetchGenres, fetchTrending } from '../services/api'
+import { fetchMovies, fetchGenres } from '../services/api'
 
 // Helper function to validate movie data
 const isValidMovie = (movie) => {
@@ -35,39 +35,44 @@ const formatMovieData = (movie, genreMap = {}) => {
 }
 
 // MovieCard component for reuse in different collections
-const MovieCard = ({ movie, actions }) => (
-  <div className="bg-[#1e1e1e] rounded overflow-hidden flex-shrink-0 hover:translate-y-[-4px] transition-transform duration-200 w-36">
-    <div className="w-full h-48 relative">
-      <img
-        src={movie.poster}
-        alt={movie.title}
-        className="w-full h-full object-cover"
-        onError={(e) => {
-          e.target.src = 'https://via.placeholder.com/342x513?text=No+Image'
-        }}
-      />
-      {movie.rating && (
-        <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
-          <span className="text-[#5ccfee]">{movie.rating}</span>
-        </div>
-      )}
-      {movie.genre && (
-        <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
-          <span className="text-xs text-[#5ccfee] font-medium truncate max-w-[70%]">
-            {movie.genre}
-          </span>
-        </div>
-      )}
+const MovieCard = ({ movie, actions }) => {
+  if (!movie.poster || !movie.title) return null
+
+  return (
+    <div className="bg-[#1e1e1e] rounded overflow-hidden flex-shrink-0 hover:translate-y-[-4px] transition-transform duration-200 w-36">
+      <div className="w-full h-48 relative">
+        <img
+          src={movie.poster}
+          alt={movie.title}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.src = 'https://via.placeholder.com/342x513?text=No+Image'
+          }}
+          loading="lazy"
+        />
+        {movie.rating && (
+          <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
+            <span className="text-[#5ccfee]">{movie.rating}</span>
+          </div>
+        )}
+        {movie.genre && (
+          <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
+            <span className="text-xs text-[#5ccfee] font-medium truncate max-w-[70%]">
+              {movie.genre}
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="p-2">
+        <h4 className="font-medium text-gray-200 text-sm mb-0.5 truncate">
+          {movie.title}
+        </h4>
+        <p className="text-gray-400 text-xs">{movie.year}</p>
+        {actions && <div className="mt-1 flex justify-between">{actions}</div>}
+      </div>
     </div>
-    <div className="p-2">
-      <h4 className="font-medium text-gray-200 text-sm mb-0.5 truncate">
-        {movie.title}
-      </h4>
-      <p className="text-gray-400 text-xs">{movie.year}</p>
-      <div className="mt-1 flex justify-between">{actions}</div>
-    </div>
-  </div>
-)
+  )
+}
 
 // GenreToggle component for selecting genres
 const GenreToggle = ({ genre, selected, onToggle }) => (
@@ -110,7 +115,7 @@ function User() {
     recommendations: false,
   })
 
-  // Mock user data
+  // User data
   const [userData, setUserData] = useState({
     name: 'Jane Smith',
     email: 'jane.smith@example.com',
@@ -127,15 +132,13 @@ function User() {
   // UI state
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-
-  // Available genres for selection
   const [availableGenres, setAvailableGenres] = useState([])
 
-  // Form state
+  // Form state - initialize only once
   const [editForm, setEditForm] = useState({
     name: userData.name,
     bio: userData.bio,
-    selectedGenres: userData.favoriteGenres,
+    selectedGenres: [...userData.favoriteGenres],
   })
 
   const [settingsForm, setSettingsForm] = useState({
@@ -144,82 +147,6 @@ function User() {
     newPassword: '',
     confirmPassword: '',
   })
-
-  // Mock movie collections
-  const collections = {
-    liked: [
-      {
-        id: 1,
-        title: 'Inception',
-        poster: 'https://via.placeholder.com/342x513?text=Inception',
-        year: 2010,
-        rating: 8.8,
-      },
-      {
-        id: 2,
-        title: 'The Shawshank Redemption',
-        poster: 'https://via.placeholder.com/342x513?text=Shawshank',
-        year: 1994,
-        rating: 9.3,
-      },
-      {
-        id: 3,
-        title: 'The Dark Knight',
-        poster: 'https://via.placeholder.com/342x513?text=Dark+Knight',
-        year: 2008,
-        rating: 9.0,
-      },
-    ],
-    watchlist: [
-      {
-        id: 4,
-        title: 'Pulp Fiction',
-        poster: 'https://via.placeholder.com/342x513?text=Pulp+Fiction',
-        year: 1994,
-        rating: 8.9,
-      },
-      {
-        id: 5,
-        title: 'The Godfather',
-        poster: 'https://via.placeholder.com/342x513?text=Godfather',
-        year: 1972,
-        rating: 9.2,
-      },
-      {
-        id: 6,
-        title: 'Interstellar',
-        poster: 'https://via.placeholder.com/342x513?text=Interstellar',
-        year: 2014,
-        rating: 8.6,
-      },
-    ],
-    recommendations: [
-      {
-        id: 7,
-        title: 'Blade Runner 2049',
-        poster: 'https://via.placeholder.com/342x513?text=Blade+Runner',
-        year: 2017,
-        rating: 8.0,
-        genre: 'Sci-Fi',
-      },
-      {
-        id: 8,
-        title: 'The Departed',
-        poster: 'https://via.placeholder.com/342x513?text=Departed',
-        year: 2006,
-        rating: 8.5,
-        genre: 'Drama',
-      },
-      {
-        id: 9,
-        title: 'John Wick',
-        poster: 'https://via.placeholder.com/342x513?text=John+Wick',
-        year: 2014,
-        rating: 7.4,
-        genre: 'Action',
-      },
-    ],
-  }
 
   // Event handlers
   const handleGoBack = () => navigate(-1)
@@ -241,14 +168,15 @@ function User() {
   const handleGenreToggle = (genre) => {
     setEditForm((prev) => {
       const currentGenres = [...prev.selectedGenres]
-      if (currentGenres.includes(genre)) {
-        return {
-          ...prev,
-          selectedGenres: currentGenres.filter((g) => g !== genre),
-        }
+      const index = currentGenres.indexOf(genre)
+
+      if (index !== -1) {
+        currentGenres.splice(index, 1)
       } else {
-        return { ...prev, selectedGenres: [...currentGenres, genre] }
+        currentGenres.push(genre)
       }
+
+      return { ...prev, selectedGenres: currentGenres }
     })
   }
 
@@ -261,17 +189,17 @@ function User() {
       favoriteGenres: editForm.selectedGenres,
     }))
     setIsEditingProfile(false)
-
-    // Recommendations will automatically update due to the dependency on favoriteGenres
   }
 
   const handleSettingsToggle = () => {
-    setSettingsForm({
-      email: userData.email,
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    })
+    if (!isSettingsOpen) {
+      setSettingsForm({
+        email: userData.email,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      })
+    }
     setIsSettingsOpen(!isSettingsOpen)
   }
 
@@ -282,52 +210,15 @@ function User() {
 
   const handleSettingsSubmit = (e) => {
     e.preventDefault()
-    // Mock update - in a real app this would save to backend
     setUserData((prev) => ({ ...prev, email: settingsForm.email }))
     setIsSettingsOpen(false)
   }
-
-  // Render movie collection with appropriate actions and loading state
-  const renderMovieCollection = (movies, title, actions, isLoading) => (
-    <div>
-      <h3 className="text-sm font-semibold mb-2">{title}</h3>
-      {title === 'Recommended For You' && (
-        <p className="text-gray-400 text-xs mb-2">
-          Based on your favorite genres
-        </p>
-      )}
-
-      {isLoading ? (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#5ccfee]"></div>
-        </div>
-      ) : movies.length > 0 ? (
-        <div className="overflow-x-auto pb-2">
-          <div className="flex space-x-3 min-w-max">
-            {movies.map((movie) => (
-              <MovieCard
-                key={movie.id}
-                movie={movie}
-                actions={actions(movie)}
-              />
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="text-gray-400 text-sm py-4 text-center">
-          {title === 'Recommended For You'
-            ? 'Select favorite genres to get recommendations'
-            : 'No movies found'}
-        </div>
-      )}
-    </div>
-  )
 
   // Action buttons for different collections
   const collectionActions = {
     liked: (movie) => (
       <>
-        <button className="text-red-500 hover:text-red-400">
+        <button className="text-red-500 hover:text-red-400" aria-label="Unlike">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-4 w-4"
@@ -341,7 +232,10 @@ function User() {
             />
           </svg>
         </button>
-        <button className="text-[#5ccfee] hover:text-[#4ab3d3]">
+        <button
+          className="text-[#5ccfee] hover:text-[#4ab3d3]"
+          aria-label="View details"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-4 w-4"
@@ -360,7 +254,10 @@ function User() {
     ),
     watchlist: (movie) => (
       <>
-        <button className="text-[#5ccfee] hover:text-[#4ab3d3]">
+        <button
+          className="text-[#5ccfee] hover:text-[#4ab3d3]"
+          aria-label="View details"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-4 w-4"
@@ -382,7 +279,10 @@ function User() {
             />
           </svg>
         </button>
-        <button className="text-gray-400 hover:text-gray-300">
+        <button
+          className="text-gray-400 hover:text-gray-300"
+          aria-label="Remove from watchlist"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-4 w-4"
@@ -412,6 +312,46 @@ function User() {
     ),
   }
 
+  // Render a movie collection section
+  const MovieCollection = ({
+    title,
+    movies,
+    actions,
+    isLoading,
+    description,
+  }) => (
+    <div>
+      <h3 className="text-sm font-semibold mb-3 text-gray-200">{title}</h3>
+      {description && (
+        <p className="text-gray-400 text-xs mb-3">{description}</p>
+      )}
+
+      {isLoading ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5ccfee]"></div>
+        </div>
+      ) : movies.length > 0 ? (
+        <div className="overflow-x-auto pb-2">
+          <div className="flex space-x-3 min-w-max">
+            {movies.map((movie) => (
+              <MovieCard
+                key={movie.id}
+                movie={movie}
+                actions={actions(movie)}
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="text-gray-400 text-sm py-4 text-center">
+          {title === 'Recommended For You'
+            ? 'Select favorite genres to get recommendations'
+            : `No ${title.toLowerCase()} found`}
+        </div>
+      )}
+    </div>
+  )
+
   // Load genre data for mapping IDs to names
   useEffect(() => {
     const loadGenres = async () => {
@@ -423,26 +363,24 @@ function User() {
           fetchGenres('tv'),
         ])
 
-        // Create genre map for lookup
+        // Create genre map and list
         const map = {}
-        const genreNames = []
+        const genreNames = new Set()
 
-        // First add movie genres
+        // Add movie genres to map
         movieGenres.forEach((genre) => {
           map[genre.id] = genre.name
-          genreNames.push(genre.name)
+          genreNames.add(genre.name)
         })
 
-        // Then add TV genres (some may overlap)
+        // Add TV genres to map (some may overlap)
         tvGenres.forEach((genre) => {
           map[genre.id] = genre.name
-          if (!genreNames.includes(genre.name)) {
-            genreNames.push(genre.name)
-          }
+          genreNames.add(genre.name)
         })
 
         setGenreMap(map)
-        setAvailableGenres(genreNames.sort())
+        setAvailableGenres([...genreNames].sort())
       } catch (error) {
         console.error('Error fetching genres:', error)
       } finally {
@@ -456,9 +394,10 @@ function User() {
   // Load 'liked' movies data
   useEffect(() => {
     const fetchLikedMovies = async () => {
+      if (!Object.keys(genreMap).length) return
+
       setLoading((prev) => ({ ...prev, liked: true }))
       try {
-        // Fetch popular movies as proxy for 'liked' movies
         const data = await fetchMovies({ sort_by: 'popularity.desc' }, 1, 10)
 
         // Filter and format valid movies
@@ -484,17 +423,16 @@ function User() {
       }
     }
 
-    if (Object.keys(genreMap).length > 0) {
-      fetchLikedMovies()
-    }
+    fetchLikedMovies()
   }, [genreMap])
 
   // Load 'watchlist' movies data
   useEffect(() => {
     const fetchWatchlistMovies = async () => {
+      if (!Object.keys(genreMap).length) return
+
       setLoading((prev) => ({ ...prev, watchlist: true }))
       try {
-        // Fetch top-rated movies as proxy for 'watchlist'
         const data = await fetchMovies({ sort_by: 'vote_average.desc' }, 1, 10)
 
         // Filter and format valid movies
@@ -520,15 +458,14 @@ function User() {
       }
     }
 
-    if (Object.keys(genreMap).length > 0) {
-      fetchWatchlistMovies()
-    }
+    fetchWatchlistMovies()
   }, [genreMap])
 
   // Fetch movie recommendations based on favorite genres
   useEffect(() => {
     const fetchRecommendations = async () => {
-      if (!userData.favoriteGenres.length) return
+      if (!userData.favoriteGenres.length || !Object.keys(genreMap).length)
+        return
 
       setLoading((prev) => ({ ...prev, recommendations: true }))
       try {
@@ -538,18 +475,20 @@ function User() {
           .map(([id]) => id)
           .join(',')
 
-        // Only fetch if we have valid genre IDs
-        if (genreIds) {
-          const data = await fetchMovies({ with_genres: genreIds }, 1, 10)
-
-          // Filter and format valid movies
-          const formattedMovies = data.results
-            .filter(isValidMovie)
-            .map((movie) => formatMovieData(movie, genreMap))
-            .slice(0, 8)
-
-          setRecommendedMovies(formattedMovies)
+        if (!genreIds) {
+          setRecommendedMovies([])
+          return
         }
+
+        const data = await fetchMovies({ with_genres: genreIds }, 1, 10)
+
+        // Filter and format valid movies
+        const formattedMovies = data.results
+          .filter(isValidMovie)
+          .map((movie) => formatMovieData(movie, genreMap))
+          .slice(0, 8)
+
+        setRecommendedMovies(formattedMovies)
       } catch (error) {
         console.error('Error fetching recommendations:', error)
       } finally {
@@ -557,12 +496,7 @@ function User() {
       }
     }
 
-    if (
-      Object.keys(genreMap).length > 0 &&
-      userData.favoriteGenres.length > 0
-    ) {
-      fetchRecommendations()
-    }
+    fetchRecommendations()
   }, [genreMap, userData.favoriteGenres])
 
   return (
@@ -688,6 +622,7 @@ function User() {
                       <button
                         onClick={handleProfileEdit}
                         className="inline-flex items-center px-3 py-1 bg-[#1e1e1e] hover:bg-[#333] text-xs rounded transition duration-200"
+                        aria-label="Edit profile"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -702,6 +637,7 @@ function User() {
                       <button
                         onClick={handleSettingsToggle}
                         className="inline-flex items-center px-3 py-1 bg-[#1e1e1e] hover:bg-[#333] text-xs rounded transition duration-200"
+                        aria-label="Settings"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -904,90 +840,27 @@ function User() {
           {/* Movie Collections */}
           <div className="bg-[#1e1e1e] rounded-lg shadow-md overflow-hidden border border-[#2a2a2a]">
             <div className="p-4 space-y-6">
-              {/* Render collections with updated styles */}
-              <div>
-                <h3 className="text-sm font-semibold mb-3 text-gray-200">
-                  Liked Movies
-                </h3>
-                {loading.liked ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5ccfee]"></div>
-                  </div>
-                ) : likedMovies.length > 0 ? (
-                  <div className="overflow-x-auto pb-2">
-                    <div className="flex space-x-3 min-w-max">
-                      {likedMovies.map((movie) => (
-                        <MovieCard
-                          key={movie.id}
-                          movie={movie}
-                          actions={collectionActions.liked(movie)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-gray-400 text-sm py-4 text-center">
-                    No liked movies found
-                  </div>
-                )}
-              </div>
+              <MovieCollection
+                title="Liked Movies"
+                movies={likedMovies}
+                actions={collectionActions.liked}
+                isLoading={loading.liked}
+              />
 
-              <div>
-                <h3 className="text-sm font-semibold mb-3 text-gray-200">
-                  Watchlist
-                </h3>
-                {loading.watchlist ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5ccfee]"></div>
-                  </div>
-                ) : watchlistMovies.length > 0 ? (
-                  <div className="overflow-x-auto pb-2">
-                    <div className="flex space-x-3 min-w-max">
-                      {watchlistMovies.map((movie) => (
-                        <MovieCard
-                          key={movie.id}
-                          movie={movie}
-                          actions={collectionActions.watchlist(movie)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-gray-400 text-sm py-4 text-center">
-                    No movies in watchlist
-                  </div>
-                )}
-              </div>
+              <MovieCollection
+                title="Watchlist"
+                movies={watchlistMovies}
+                actions={collectionActions.watchlist}
+                isLoading={loading.watchlist}
+              />
 
-              <div>
-                <h3 className="text-sm font-semibold mb-3 text-gray-200">
-                  Recommended For You
-                </h3>
-                <p className="text-gray-400 text-xs mb-3">
-                  Based on your favorite genres
-                </p>
-                {loading.recommendations ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5ccfee]"></div>
-                  </div>
-                ) : recommendedMovies.length > 0 ? (
-                  <div className="overflow-x-auto pb-2">
-                    <div className="flex space-x-3 min-w-max">
-                      {recommendedMovies.map((movie) => (
-                        <MovieCard
-                          key={movie.id}
-                          movie={movie}
-                          actions={collectionActions.recommendations(movie)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-gray-400 text-sm py-4 text-center">
-                    Select favorite genres to get recommendations
-                  </div>
-                )}
-              </div>
+              <MovieCollection
+                title="Recommended For You"
+                movies={recommendedMovies}
+                actions={collectionActions.recommendations}
+                isLoading={loading.recommendations}
+                description="Based on your favorite genres"
+              />
             </div>
           </div>
         </div>

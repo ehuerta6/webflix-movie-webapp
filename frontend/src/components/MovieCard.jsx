@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { Link } from 'react-router-dom'
 
-function MovieCard({ movie }) {
+const MovieCard = memo(function MovieCard({ movie }) {
   const { id, type = 'movie', title, poster, rating, genre, year } = movie
   const [imageLoaded, setImageLoaded] = useState(false)
 
@@ -28,15 +28,21 @@ function MovieCard({ movie }) {
           onLoad={() => setImageLoaded(true)}
           loading="lazy"
         />
-        <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
-          <span className="text-[#5ccfee]">{rating}</span>
-        </div>
+        {rating && (
+          <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
+            <span className="text-[#5ccfee]">{rating}</span>
+          </div>
+        )}
 
         {/* Genre badge */}
         <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-[#5ccfee] font-medium">{genre}</span>
-            <span className="text-xs text-gray-300">{year}</span>
+            {genre && (
+              <span className="text-xs text-[#5ccfee] font-medium">
+                {genre}
+              </span>
+            )}
+            {year && <span className="text-xs text-gray-300">{year}</span>}
           </div>
         </div>
       </div>
@@ -45,6 +51,6 @@ function MovieCard({ movie }) {
       </div>
     </Link>
   )
-}
+})
 
 export default MovieCard

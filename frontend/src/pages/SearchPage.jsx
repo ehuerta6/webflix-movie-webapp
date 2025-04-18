@@ -8,112 +8,8 @@ import {
   fetchShows,
   fetchTrending,
 } from '../services/api'
-
-// Pagination component
-const Pagination = ({ currentPage, totalPages, onPageChange }) => {
-  // Calculate pagination range
-  const getPageNumbers = () => {
-    const pageNumbers = []
-    const maxPagesToShow = 5
-    const halfRange = Math.floor(maxPagesToShow / 2)
-
-    let startPage = Math.max(currentPage - halfRange, 1)
-    let endPage = Math.min(startPage + maxPagesToShow - 1, totalPages)
-
-    if (endPage - startPage + 1 < maxPagesToShow) {
-      startPage = Math.max(endPage - maxPagesToShow + 1, 1)
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pageNumbers.push(i)
-    }
-
-    return pageNumbers
-  }
-
-  return (
-    <div className="flex justify-center items-center space-x-2 mt-10">
-      {/* Previous Page Button */}
-      <button
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
-        className={`px-3 py-1 rounded-md text-sm ${
-          currentPage === 1
-            ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-            : 'bg-[#1e1e1e] text-white hover:bg-[#2e2e2e]'
-        }`}
-      >
-        ← Prev
-      </button>
-
-      {/* First Page */}
-      {getPageNumbers()[0] > 1 && (
-        <>
-          <button
-            onClick={() => onPageChange(1)}
-            className={`px-3 py-1 rounded-md text-sm ${
-              currentPage === 1
-                ? 'bg-[#5ccfee] text-black font-medium'
-                : 'bg-[#1e1e1e] text-white hover:bg-[#2e2e2e]'
-            }`}
-          >
-            1
-          </button>
-          {getPageNumbers()[0] > 2 && (
-            <span className="text-gray-500">...</span>
-          )}
-        </>
-      )}
-
-      {/* Page Numbers */}
-      {getPageNumbers().map((pageNumber) => (
-        <button
-          key={pageNumber}
-          onClick={() => onPageChange(pageNumber)}
-          className={`px-3 py-1 rounded-md text-sm ${
-            currentPage === pageNumber
-              ? 'bg-[#5ccfee] text-black font-medium'
-              : 'bg-[#1e1e1e] text-white hover:bg-[#2e2e2e]'
-          }`}
-        >
-          {pageNumber}
-        </button>
-      ))}
-
-      {/* Last Page */}
-      {getPageNumbers()[getPageNumbers().length - 1] < totalPages && (
-        <>
-          {getPageNumbers()[getPageNumbers().length - 1] < totalPages - 1 && (
-            <span className="text-gray-500">...</span>
-          )}
-          <button
-            onClick={() => onPageChange(totalPages)}
-            className={`px-3 py-1 rounded-md text-sm ${
-              currentPage === totalPages
-                ? 'bg-[#5ccfee] text-black font-medium'
-                : 'bg-[#1e1e1e] text-white hover:bg-[#2e2e2e]'
-            }`}
-          >
-            {totalPages}
-          </button>
-        </>
-      )}
-
-      {/* Next Page Button */}
-      <button
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
-        className={`px-3 py-1 rounded-md text-sm ${
-          currentPage === totalPages
-            ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-            : 'bg-[#1e1e1e] text-white hover:bg-[#2e2e2e]'
-        }`}
-      >
-        Next →
-      </button>
-    </div>
-  )
-}
+import Pagination from '../components/Pagination'
+import ResultCard from '../components/ResultCard'
 
 function SearchPage() {
   const location = useLocation()
@@ -137,14 +33,14 @@ function SearchPage() {
   const [totalResults, setTotalResults] = useState(0)
   const ITEMS_PER_PAGE = 20
 
-  // Add new state variables for featured content
+  // Featured content states
   const [featured, setFeatured] = useState(null)
   const [featuredItems, setFeaturedItems] = useState([])
   const [currentFeaturedIndex, setCurrentFeaturedIndex] = useState(0)
   const carouselTimerRef = useRef(null)
 
   // Helper function to validate if content has required information
-  const isValidContent = (item) => {
+  const isValidContent = useCallback((item) => {
     if (!item) return false
 
     // Basic requirements for all types
@@ -177,7 +73,7 @@ function SearchPage() {
 
     // If media_type is not specified and can't determine the type, use strict validation
     return hasIdentifier && hasTitle && hasPoster && item.overview
-  }
+  }, [])
 
   // Load genres for proper display and search
   useEffect(() => {
@@ -199,651 +95,315 @@ function SearchPage() {
           ),
         ]
 
-        // Create genre map for lookup
-        const genreMap = {}
+        // Create a map for quick lookups
+        const genreMapping = {}
         allGenres.forEach((genre) => {
-          genreMap[genre.id] = genre.name
-          // Also add lowercase version of genre name as key for case-insensitive search
-          genreMap[genre.name.toLowerCase()] = genre.id
+          genreMapping[genre.id] = genre.name
         })
 
-        setGenreMap(genreMap)
+        setGenreMap(genreMapping)
         setGenreList(allGenres)
       } catch (err) {
         console.error('Error loading genres:', err)
+        setError('Failed to load genres')
       }
     }
 
     loadGenres()
   }, [])
 
-  // Load popular movies for default view
+  // Load popular content when no search is active
   useEffect(() => {
-    const loadPopularMovies = async () => {
-      if (!searchQuery) {
-        setLoadingPopular(true)
-        try {
-          // Fetch popular movies from API
-          const response = await fetchMovies(
-            {
-              sort_by: 'popularity.desc',
-              include_adult: false,
-            },
-            currentPage,
-            ITEMS_PER_PAGE
-          )
-
-          if (response.results && response.results.length > 0) {
-            // Update pagination information
-            setTotalPages(
-              response.total_pages > 500 ? 500 : response.total_pages
-            )
-            setTotalResults(response.total_results)
-
-            // Filter only valid content
-            const validResults = response.results.filter(isValidContent)
-
-            // Format movie data for display
-            const formattedMovies = validResults.map((movie) => ({
-              id: movie.id,
-              type: 'movie',
-              title: movie.title,
-              posterPath: movie.poster_path,
-              rating: movie.vote_average ? movie.vote_average.toFixed(1) : null,
-              year: movie.release_date
-                ? movie.release_date.substring(0, 4)
-                : 'Unknown',
-              genre:
-                movie.genre_ids && movie.genre_ids.length > 0
-                  ? genreMap[movie.genre_ids[0]] || 'Unknown'
-                  : 'Unknown',
-              description: movie.overview,
-            }))
-
-            setPopularMovies(formattedMovies)
-          }
-        } catch (err) {
-          console.error('Error loading popular movies:', err)
-        } finally {
-          setLoadingPopular(false)
-        }
-      }
-    }
-
-    // Only load popular movies if genreMap is loaded
-    if (Object.keys(genreMap).length > 0) {
+    if (!searchQuery) {
       loadPopularMovies()
-    }
-  }, [searchQuery, genreMap, currentPage])
-
-  // Check if the query is a genre name
-  const isGenreQuery = useMemo(() => {
-    if (!searchQuery || Object.keys(genreMap).length === 0) return false
-
-    const lowerCaseQuery = searchQuery.toLowerCase()
-    return Object.keys(genreMap).some((key) => {
-      // Check if the key is a string (genre name) and matches the query
-      return (
-        typeof key === 'string' &&
-        !Number.isInteger(parseInt(key)) &&
-        key.includes(lowerCaseQuery)
-      )
-    })
-  }, [searchQuery, genreMap])
-
-  // Search function using TMDB API
-  useEffect(() => {
-    const performSearch = async () => {
-      if (!searchQuery.trim()) {
-        setSearchResults([])
-        return
-      }
-
-      setLoading(true)
-      setError(null)
-      setIsGenreSearch(false)
-
-      try {
-        let results = []
-        let totalResults = 0
-        let totalPages = 0
-
-        // Check if the search query matches any genre names
-        const lowerCaseQuery = searchQuery.toLowerCase()
-        const matchingGenres = genreList.filter((genre) =>
-          genre.name.toLowerCase().includes(lowerCaseQuery)
-        )
-
-        if (matchingGenres.length > 0 && isGenreQuery) {
-          // If we have a genre match, search by genre
-          setIsGenreSearch(true)
-          const genreId = matchingGenres[0].id
-
-          // Fetch movies with this genre
-          const movieData = await searchByGenre(
-            genreId,
-            'movie',
-            currentPage,
-            ITEMS_PER_PAGE / 2
-          )
-          // Fetch TV shows with this genre
-          const tvData = await searchByGenre(
-            genreId,
-            'tv',
-            currentPage,
-            ITEMS_PER_PAGE / 2
-          )
-
-          // Combine results and add media_type
-          const movieResults = movieData.results || []
-          const tvResults = tvData.results || []
-
-          // Update pagination information (combining both sets)
-          totalResults = Math.max(
-            movieData.total_results || 0,
-            tvData.total_results || 0
-          )
-          totalPages = Math.max(
-            movieData.total_pages || 0,
-            tvData.total_pages || 0
-          )
-
-          // Combine and add media_type, then filter for valid content only
-          results = [
-            ...movieResults.map((item) => ({ ...item, media_type: 'movie' })),
-            ...tvResults.map((item) => ({ ...item, media_type: 'tv' })),
-          ].filter(isValidContent)
-        } else {
-          // Regular search with pagination
-          const searchData = await searchTMDB(
-            searchQuery,
-            currentPage,
-            ITEMS_PER_PAGE
-          )
-          // Filter for valid content only
-          results = (searchData.results || []).filter(isValidContent)
-
-          // Update pagination information
-          totalResults = searchData.total_results || 0
-          totalPages = searchData.total_pages || 0
-        }
-
-        // Update state with pagination info
-        setTotalResults(totalResults)
-        setTotalPages(totalPages > 500 ? 500 : totalPages) // TMDB API limits to 500 pages
-
-        // Format search results for our UI
-        const formattedResults = results.map((item) => {
-          // Different properties based on media type
-          let formattedItem = {
-            id: item.id,
-            type: item.media_type,
-            posterPath: item.poster_path || item.profile_path,
-            rating: item.vote_average ? item.vote_average.toFixed(1) : null,
-          }
-
-          // Add type-specific properties
-          if (item.media_type === 'movie') {
-            formattedItem = {
-              ...formattedItem,
-              title: item.title,
-              year: item.release_date
-                ? item.release_date.substring(0, 4)
-                : 'Unknown',
-              genre:
-                item.genre_ids && item.genre_ids.length > 0
-                  ? genreMap[item.genre_ids[0]] || 'Unknown'
-                  : 'Unknown',
-              description: item.overview,
-            }
-          } else if (item.media_type === 'tv') {
-            formattedItem = {
-              ...formattedItem,
-              title: item.name,
-              year: item.first_air_date
-                ? item.first_air_date.substring(0, 4)
-                : 'Unknown',
-              genre:
-                item.genre_ids && item.genre_ids.length > 0
-                  ? genreMap[item.genre_ids[0]] || 'Unknown'
-                  : 'Unknown',
-              description: item.overview,
-            }
-          } else if (item.media_type === 'person') {
-            formattedItem = {
-              ...formattedItem,
-              title: item.name,
-              popularity: item.popularity,
-              knownFor: item.known_for_department || 'Acting',
-              knownForTitles: item.known_for
-                ? item.known_for
-                    .filter(isValidContent)
-                    .map((work) => work.title || work.name)
-                    .join(', ')
-                : '',
-            }
-          }
-
-          return formattedItem
-        })
-
-        setSearchResults(formattedResults)
-      } catch (err) {
-        console.error('Search error:', err)
-        setError('Failed to perform search. Please try again.')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    // Only perform search if genreMap is loaded
-    if (Object.keys(genreMap).length > 0) {
+      loadFeaturedContent()
+    } else {
       performSearch()
     }
-  }, [searchQuery, genreMap, currentPage, genreList, isGenreQuery])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, currentPage, activeTab])
 
-  // Filter results based on active tab
-  const filteredResults =
-    activeTab === 'all'
-      ? searchResults
-      : searchResults.filter((item) => item.type === activeTab)
+  // Clean up carousel timer on unmount
+  useEffect(() => {
+    return () => {
+      if (carouselTimerRef.current) {
+        clearInterval(carouselTimerRef.current)
+      }
+    }
+  }, [])
 
-  // Handle search input changes
+  const loadPopularMovies = async () => {
+    setLoadingPopular(true)
+    try {
+      let results
+
+      if (activeTab === 'movies') {
+        const data = await fetchMovies(
+          { sort_by: 'popularity.desc' },
+          currentPage
+        )
+        results = data.results.map((item) => ({ ...item, media_type: 'movie' }))
+        setTotalPages(data.total_pages)
+        setTotalResults(data.total_results)
+      } else if (activeTab === 'tv') {
+        const data = await fetchShows(
+          { sort_by: 'popularity.desc' },
+          currentPage
+        )
+        results = data.results.map((item) => ({ ...item, media_type: 'tv' }))
+        setTotalPages(data.total_pages)
+        setTotalResults(data.total_results)
+      } else {
+        const data = await fetchTrending('all', 'week')
+        results = data.results
+        setTotalPages(data.total_pages || 1)
+        setTotalResults(data.total_results || results.length)
+      }
+
+      // Filter out invalid content
+      const validResults = results.filter(isValidContent)
+
+      setPopularMovies(validResults)
+      setError(null)
+    } catch (err) {
+      console.error('Error loading popular content:', err)
+      setError('Failed to load content. Please try again later.')
+      setPopularMovies([])
+    } finally {
+      setLoadingPopular(false)
+    }
+  }
+
+  const loadFeaturedContent = async () => {
+    try {
+      const data = await fetchTrending('all', 'day')
+
+      if (data && data.results && data.results.length > 0) {
+        // Filter for valid featured items
+        const validFeatured = data.results.filter(isValidContent).slice(0, 5) // Take top 5 trending items
+
+        if (validFeatured.length > 0) {
+          setFeaturedItems(validFeatured)
+          setFeatured(validFeatured[0])
+
+          // Set up auto-rotation
+          if (carouselTimerRef.current) {
+            clearInterval(carouselTimerRef.current)
+          }
+
+          carouselTimerRef.current = setInterval(() => {
+            setCurrentFeaturedIndex((prev) => {
+              const nextIndex = (prev + 1) % validFeatured.length
+              setFeatured(validFeatured[nextIndex])
+              return nextIndex
+            })
+          }, 8000) // Rotate every 8 seconds
+        }
+      }
+    } catch (err) {
+      console.error('Error loading featured content:', err)
+    }
+  }
+
+  const performSearch = async () => {
+    if (!searchQuery && !isGenreSearch) {
+      setSearchResults([])
+      return
+    }
+
+    setLoading(true)
+    try {
+      let results = []
+      let totalPgs = 0
+      let totalRes = 0
+
+      // Determine the type of search based on active tab
+      let searchType =
+        activeTab === 'all' ? 'multi' : activeTab === 'tv' ? 'tv' : 'movie'
+
+      if (isGenreSearch) {
+        // Genre search
+        const genreId = searchQuery.split('-')[1]
+        if (genreId) {
+          const mediaType = activeTab === 'tv' ? 'tv' : 'movie'
+          const data = await searchByGenre(genreId, mediaType, currentPage)
+
+          results = data.results.map((item) => ({
+            ...item,
+            media_type: mediaType,
+          }))
+
+          totalPgs = data.total_pages
+          totalRes = data.total_results
+        }
+      } else {
+        // Text search
+        const data = await searchTMDB(searchQuery, currentPage)
+
+        results = data.results.filter((item) => {
+          if (activeTab === 'all') return true
+          return item.media_type === activeTab
+        })
+
+        totalPgs = data.total_pages
+        totalRes = data.total_results
+      }
+
+      // Filter and format results
+      const validResults = results.filter(isValidContent).map(formatMovieData)
+
+      setSearchResults(validResults)
+      setTotalPages(totalPgs)
+      setTotalResults(totalRes)
+      setError(null)
+    } catch (err) {
+      console.error('Error searching:', err)
+      setError('Search failed. Please try again.')
+      setSearchResults([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleSearch = (e) => {
     e.preventDefault()
-    const searchValue = e.target.search.value.trim()
+    const inputElement = e.target.elements.searchQuery
+    const query = inputElement.value.trim()
 
-    if (searchValue) {
-      // Reset page when performing a new search
+    if (query) {
       setCurrentPage(1)
-      navigate(`/search?q=${encodeURIComponent(searchValue)}`)
+      setIsGenreSearch(false)
+      navigate(`/search?q=${encodeURIComponent(query)}`)
     }
   }
 
-  // Handle page change
   const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage)
-      // Scroll to top when changing pages
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
+    setCurrentPage(newPage)
+    // Scroll to top when changing pages
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
   }
 
-  // Go back to previous page
   const handleGoBack = () => {
-    navigate(-1) // Go back to the previous page in history
+    navigate(-1)
   }
 
-  // Format movie data for featured display
   const formatMovieData = (movie) => ({
     id: movie.id,
-    type: movie.media_type || 'movie',
     title: movie.title || movie.name,
+    overview: movie.overview,
     poster: movie.poster_path
       ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
       : null,
     backdrop: movie.backdrop_path
       ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
       : null,
-    rating: movie.vote_average.toFixed(1),
-    genre: movie.genre_ids
-      ? movie.genre_ids[0] && genreMap[movie.genre_ids[0]]
-        ? genreMap[movie.genre_ids[0]]
-        : 'Unknown'
-      : 'Unknown',
-    year:
-      movie.release_date || movie.first_air_date
-        ? (movie.release_date || movie.first_air_date).substring(0, 4)
-        : 'Unknown',
-    description: movie.overview,
+    rating: movie.vote_average ? movie.vote_average.toFixed(1) : null,
+    releaseDate: movie.release_date || movie.first_air_date,
+    type: movie.media_type === 'tv' ? 'tv' : 'movie',
     genres: movie.genre_ids
-      ? movie.genre_ids.filter((id) => genreMap[id]).map((id) => genreMap[id])
+      ? movie.genre_ids.map((id) => genreMap[id]).filter(Boolean)
       : [],
+    popularity: movie.popularity,
   })
 
-  // Function to rotate featured items
-  const rotateFeatured = useCallback(() => {
-    setCurrentFeaturedIndex((prevIndex) =>
-      prevIndex === featuredItems.length - 1 ? 0 : prevIndex + 1
-    )
-  }, [featuredItems.length])
-
-  // Set up automatic rotation
-  useEffect(() => {
-    if (featuredItems.length > 1) {
-      carouselTimerRef.current = setInterval(rotateFeatured, 8000) // Rotate every 8 seconds
-
-      return () => {
-        if (carouselTimerRef.current) {
-          clearInterval(carouselTimerRef.current)
-        }
-      }
-    }
-  }, [featuredItems.length, rotateFeatured])
-
-  // Function to manually change featured item
   const changeFeaturedItem = (index) => {
-    // Reset the timer when manually changed
-    if (carouselTimerRef.current) {
-      clearInterval(carouselTimerRef.current)
-      carouselTimerRef.current = setInterval(rotateFeatured, 8000)
-    }
-    setCurrentFeaturedIndex(index)
-  }
+    if (index >= 0 && index < featuredItems.length) {
+      setCurrentFeaturedIndex(index)
+      setFeatured(featuredItems[index])
 
-  // Update featured item when currentFeaturedIndex changes
-  useEffect(() => {
-    if (featuredItems.length > 0) {
-      setFeatured(featuredItems[currentFeaturedIndex])
-    }
-  }, [currentFeaturedIndex, featuredItems])
-
-  // Load featured content when the page loads
-  useEffect(() => {
-    const loadFeaturedContent = async () => {
-      try {
-        // Fetch trending content for featured section
-        const trendingData = await fetchTrending('all', 'day')
-
-        if (trendingData.results && trendingData.results.length > 0) {
-          // Filter valid content requiring both poster and backdrop
-          const validTrendingResults = trendingData.results.filter(
-            (item) => isValidContent(item) && item.backdrop_path
-          )
-
-          if (validTrendingResults.length > 0) {
-            // Use the first 5 valid trending items as featured content
-            const featuredItems = validTrendingResults
-              .slice(0, 5)
-              .map((item) => formatMovieData(item))
-
-            // Preload backdrop images for smoother carousel
-            const backdropUrls = featuredItems
-              .map((item) => item.backdrop)
-              .filter(Boolean)
-
-            if (backdropUrls.length) {
-              // Start preloading in background
-              import('../services/api').then((api) => {
-                api.preloadImages(backdropUrls).catch(() => {}) // Ignore preload errors
-              })
-            }
-
-            setFeaturedItems(featuredItems)
-            setFeatured(featuredItems[0]) // Set the first item as initial featured
-          }
-        }
-      } catch (err) {
-        console.error('Error loading featured content:', err)
+      // Reset auto-rotation timer
+      if (carouselTimerRef.current) {
+        clearInterval(carouselTimerRef.current)
       }
-    }
 
-    // Only load featured content when there's no search query
-    if (!searchQuery && Object.keys(genreMap).length > 0) {
-      loadFeaturedContent()
+      carouselTimerRef.current = setInterval(() => {
+        setCurrentFeaturedIndex((prev) => {
+          const nextIndex = (prev + 1) % featuredItems.length
+          setFeatured(featuredItems[nextIndex])
+          return nextIndex
+        })
+      }, 8000)
     }
-  }, [searchQuery, genreMap])
-
-  // Define CSS animation style for the carousel
-  const carouselAnimation = {
-    opacity: 1,
-    transition: 'opacity 600ms ease-in-out, transform 800ms ease-in-out',
   }
 
-  // Featured component for the main highlight with carousel
   const Featured = ({ movie }) => {
-    // Don't render if movie data is invalid or missing backdrop
-    if (!movie || !movie.backdrop) return null
+    if (!movie) return null
 
-    const [backdropLoaded, setBackdropLoaded] = useState(false)
+    const formattedMovie = formatMovieData(movie)
 
-    // Function to go to the next item
     const goToNext = (e) => {
-      e.preventDefault()
-      setCurrentFeaturedIndex((prevIndex) =>
-        prevIndex === featuredItems.length - 1 ? 0 : prevIndex + 1
-      )
-
-      // Reset timer
-      if (carouselTimerRef.current) {
-        clearInterval(carouselTimerRef.current)
-        carouselTimerRef.current = setInterval(rotateFeatured, 8000)
-      }
+      e.stopPropagation()
+      const nextIndex = (currentFeaturedIndex + 1) % featuredItems.length
+      changeFeaturedItem(nextIndex)
     }
 
-    // Function to go to the previous item
     const goToPrev = (e) => {
-      e.preventDefault()
-      setCurrentFeaturedIndex((prevIndex) =>
-        prevIndex === 0 ? featuredItems.length - 1 : prevIndex - 1
-      )
-
-      // Reset timer
-      if (carouselTimerRef.current) {
-        clearInterval(carouselTimerRef.current)
-        carouselTimerRef.current = setInterval(rotateFeatured, 8000)
-      }
+      e.stopPropagation()
+      const prevIndex =
+        (currentFeaturedIndex - 1 + featuredItems.length) % featuredItems.length
+      changeFeaturedItem(prevIndex)
     }
 
     return (
-      <section className="relative mb-10">
-        {/* Reduced height for the featured container on search page */}
-        <div className="w-full h-[300px] md:h-[400px] lg:h-[450px] relative overflow-hidden">
-          {/* Gradient overlay for better text visibility */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#121212]/80 via-transparent to-[#121212]/80 z-10"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#12121280] to-transparent z-10"></div>
+      <div className="relative overflow-hidden mb-8 rounded-xl shadow-xl">
+        <Link
+          to={`/${formattedMovie.type}/${formattedMovie.id}`}
+          className="block"
+        >
+          <div className="aspect-[21/9] relative">
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-transparent opacity-80"></div>
 
-          {/* Loading state */}
-          {!backdropLoaded && (
-            <div className="absolute inset-0 bg-[#1a1a1a] flex items-center justify-center z-5">
-              <div className="w-10 h-10 border-3 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
-            </div>
-          )}
-
-          {/* Background image with animation */}
-          <div
-            className="w-full h-full"
-            style={{
-              ...carouselAnimation,
-              position: 'relative',
-            }}
-          >
             <img
-              key={movie.id} // Key helps React identify when to animate
-              src={movie.backdrop}
-              alt={movie.title}
-              className={`w-full h-full object-cover transition-all duration-700 ease-out ${
-                backdropLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-              style={{
-                transform: 'scale(1.05)',
-                animation: backdropLoaded
-                  ? 'fadeIn 800ms ease-in-out forwards'
-                  : 'none',
-              }}
-              onLoad={() => setBackdropLoaded(true)}
-              fetchPriority="high"
+              src={formattedMovie.backdrop}
+              alt={formattedMovie.title}
+              className="w-full h-full object-cover"
             />
-          </div>
 
-          {/* Content overlay with animation */}
-          <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-8 z-20">
-            <div className="max-w-4xl mx-auto w-full" style={carouselAnimation}>
-              <div className="flex items-center gap-2 mb-1 opacity-90">
-                <span className="rating-badge">{movie.rating}</span>
-                <span className="text-gray-300 text-sm">{movie.year}</span>
-                <span className="text-gray-300 text-sm hidden sm:inline">
-                  • {movie.genres && movie.genres.join(', ')}
+            <div className="absolute bottom-0 left-0 right-0 p-4 md:p-8">
+              <h2 className="text-2xl md:text-4xl font-bold text-white mb-2">
+                {formattedMovie.title}
+              </h2>
+
+              <div className="flex items-center mb-2">
+                {formattedMovie.rating && (
+                  <span className="bg-[#5ccfee] text-black px-2 py-0.5 rounded text-sm font-medium mr-3">
+                    {formattedMovie.rating}
+                  </span>
+                )}
+
+                {formattedMovie.releaseDate && (
+                  <span className="text-gray-300 text-sm mr-3">
+                    {new Date(formattedMovie.releaseDate).getFullYear()}
+                  </span>
+                )}
+
+                <span className="text-[#5ccfee] font-medium text-sm">
+                  {formattedMovie.type === 'tv' ? 'TV Series' : 'Movie'}
                 </span>
               </div>
 
-              <h1
-                className="text-xl md:text-2xl lg:text-3xl font-medium text-white mb-2"
-                key={`title-${movie.id}`}
-                style={{
-                  animation: 'slideUp 600ms ease-out forwards',
-                  textShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                }}
-              >
-                {movie.title}
-              </h1>
-
-              <p
-                className="text-gray-300 text-xs md:text-sm leading-relaxed max-w-2xl mb-3 line-clamp-2 md:line-clamp-3"
-                key={`desc-${movie.id}`}
-                style={{
-                  animation: 'slideUp 700ms ease-out forwards',
-                  animationDelay: '100ms',
-                  opacity: 0,
-                }}
-              >
-                {movie.description}
+              <p className="text-gray-300 line-clamp-3 md:w-2/3 text-sm md:text-base">
+                {formattedMovie.overview}
               </p>
-
-              <div
-                className="flex gap-3 mt-3"
-                key={`buttons-${movie.id}`}
-                style={{
-                  animation: 'slideUp 800ms ease-out forwards',
-                  animationDelay: '200ms',
-                  opacity: 0,
-                }}
-              >
-                <Link
-                  to={`/${movie.type}/${movie.id}`}
-                  className="primary-button flex items-center gap-1 cursor-pointer group text-sm py-1.5"
-                >
-                  <span className="transform transition-transform group-hover:scale-110">
-                    ▶
-                  </span>{' '}
-                  Watch
-                </Link>
-                <button className="secondary-button cursor-pointer flex items-center gap-1 hover:bg-[#5ccfee20] text-sm py-1.5">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  Add to List
-                </button>
-              </div>
-
-              {/* Carousel indicators */}
-              {featuredItems.length > 1 && (
-                <div
-                  className="flex mt-4 gap-2"
-                  style={{
-                    animation: 'fadeIn 1s ease-out forwards',
-                    animationDelay: '300ms',
-                    opacity: 0,
-                  }}
-                >
-                  {featuredItems.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => changeFeaturedItem(index)}
-                      className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                        index === currentFeaturedIndex
-                          ? 'bg-[#5ccfee] w-4'
-                          : 'bg-gray-600 hover:bg-gray-500'
-                      }`}
-                      aria-label={`View featured item ${index + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
             </div>
           </div>
+        </Link>
 
-          {/* Navigation arrows */}
-          {featuredItems.length > 1 && (
-            <>
-              <button
-                onClick={goToPrev}
-                className="absolute left-2 md:left-6 top-1/2 transform -translate-y-1/2 z-30 bg-black/30 hover:bg-black/50 text-white p-1.5 rounded-full focus:outline-none transition-all duration-200 hover:scale-110"
-                aria-label="Previous featured item"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-              </button>
-              <button
-                onClick={goToNext}
-                className="absolute right-2 md:right-6 top-1/2 transform -translate-y-1/2 z-30 bg-black/30 hover:bg-black/50 text-white p-1.5 rounded-full focus:outline-none transition-all duration-200 hover:scale-110"
-                aria-label="Next featured item"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
-            </>
-          )}
-        </div>
-      </section>
-    )
-  }
-
-  return (
-    <div className="bg-[#121212] min-h-screen pb-12">
-      <div className="container mx-auto px-4 pt-8">
-        {/* Go Back Button */}
-        <div className="mb-4">
-          <button
-            onClick={handleGoBack}
-            className="flex items-center gap-1.5 text-white bg-[#1e1e1e] hover:bg-[#2e2e2e] px-3 py-1.5 rounded-md transition-colors text-sm"
-          >
-            <span className="text-sm">←</span> Go Back
-          </button>
-        </div>
-
-        {/* Search Form */}
-        <form onSubmit={handleSearch} className="mb-6">
-          <div className="relative max-w-xl mx-auto">
-            <input
-              type="text"
-              name="search"
-              defaultValue={searchQuery}
-              placeholder="Search for movies, TV shows, people or genres..."
-              className="w-full bg-[#1e1e1e] border border-gray-700 text-white py-2.5 px-4 pr-12 rounded-md focus:outline-none focus:border-[#5ccfee] text-sm"
-            />
+        {/* Carousel Navigation */}
+        {featuredItems.length > 1 && (
+          <>
             <button
-              type="submit"
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+              onClick={goToPrev}
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 p-2 rounded-full hover:bg-black/70 transition-colors"
+              aria-label="Previous"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
+                className="h-6 w-6 text-white"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -852,326 +412,227 @@ function SearchPage() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  d="M15 19l-7-7 7-7"
                 />
               </svg>
             </button>
-          </div>
-        </form>
 
-        {/* Minimalist Genre Bar - Moved above featured content */}
-        {!searchQuery && genreList.length > 0 && (
-          <div className="mb-6 max-w-xl mx-auto">
-            <div className="flex items-center flex-wrap gap-1.5">
-              {genreList
-                // Filter for only popular/core genres
-                .filter(
-                  (genre) =>
-                    genre.id > 0 &&
-                    genre.name &&
-                    genre.name.trim() !== '' &&
-                    ![
-                      'Foreign',
-                      'TV Movie',
-                      'News',
-                      'Documentary',
-                      'War',
-                      'Western',
-                      'History',
-                      'Music',
-                      'Reality',
-                      'Soap',
-                      'Talk',
-                      'War & Politics',
-                    ].includes(genre.name)
-                )
-                // Sort alphabetically and limit to 12 core genres
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .slice(0, 12)
-                .map((genre) => (
-                  <button
-                    key={genre.id}
-                    onClick={() =>
-                      navigate(`/search?q=${encodeURIComponent(genre.name)}`)
-                    }
-                    className="px-2 py-0.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-gray-400 hover:text-white text-xs rounded transition-colors duration-200"
-                  >
-                    {genre.name}
-                  </button>
-                ))}
-            </div>
-          </div>
-        )}
+            <button
+              onClick={goToNext}
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 p-2 rounded-full hover:bg-black/70 transition-colors"
+              aria-label="Next"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
 
-        {/* Featured Movie Display - Smaller height */}
-        {!searchQuery && featured && <Featured movie={featured} />}
-
-        {/* Loading State for Search */}
-        {loading && currentPage === 1 && (
-          <div className="flex justify-center items-center py-20">
-            <div className="flex flex-col items-center">
-              <div className="w-8 h-8 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin mb-3"></div>
-              <p className="text-gray-400">Searching...</p>
-            </div>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && !loading && (
-          <div className="text-center py-10">
-            <p className="text-red-400 mb-4">{error}</p>
-            <p className="text-gray-400">
-              Please try a different search term or check back later.
-            </p>
-          </div>
-        )}
-
-        {/* Results Area */}
-        {!loading && !error && searchResults.length > 0 && (
-          <>
-            {/* Search Description */}
-            <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
-              <p className="text-gray-400 text-sm mb-2 sm:mb-0">
-                {isGenreSearch ? (
-                  <span>
-                    {totalResults.toLocaleString()} results for genre "
-                    {searchQuery}" • Page {currentPage} of {totalPages}
-                  </span>
-                ) : (
-                  <span>
-                    {totalResults.toLocaleString()} results for "{searchQuery}"
-                    • Page {currentPage} of {totalPages}
-                  </span>
-                )}
-              </p>
-
-              {/* Filter Tabs */}
-              <div className="inline-flex bg-[#1e1e1e] rounded-md p-0.5">
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-2">
+              {featuredItems.map((_, index) => (
                 <button
-                  onClick={() => setActiveTab('all')}
-                  className={`px-3 py-1 rounded-md text-xs ${
-                    activeTab === 'all'
-                      ? 'bg-[#5ccfee] text-black font-medium'
-                      : 'text-gray-300 hover:text-white'
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    changeFeaturedItem(index)
+                  }}
+                  className={`w-2 h-2 rounded-full ${
+                    index === currentFeaturedIndex
+                      ? 'bg-[#5ccfee]'
+                      : 'bg-gray-300/50'
                   }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setActiveTab('movie')}
-                  className={`px-3 py-1 rounded-md text-xs ${
-                    activeTab === 'movie'
-                      ? 'bg-[#5ccfee] text-black font-medium'
-                      : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  Movies
-                </button>
-                <button
-                  onClick={() => setActiveTab('tv')}
-                  className={`px-3 py-1 rounded-md text-xs ${
-                    activeTab === 'tv'
-                      ? 'bg-[#5ccfee] text-black font-medium'
-                      : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  TV Shows
-                </button>
-                <button
-                  onClick={() => setActiveTab('person')}
-                  className={`px-3 py-1 rounded-md text-xs ${
-                    activeTab === 'person'
-                      ? 'bg-[#5ccfee] text-black font-medium'
-                      : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  People
-                </button>
-              </div>
-            </div>
-
-            {/* Loading overlay for page changes */}
-            {loading && currentPage > 1 && (
-              <div className="relative mb-4">
-                <div className="absolute inset-0 bg-[#121212]/70 backdrop-blur-sm flex justify-center items-center z-10 rounded-lg">
-                  <div className="flex items-center">
-                    <div className="w-5 h-5 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin mr-2"></div>
-                    <p className="text-gray-400 text-sm">
-                      Loading page {currentPage}...
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Results Grid - More compact layout */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 md:gap-3">
-              {filteredResults.map((item) => (
-                <ResultCard key={`${item.type}-${item.id}`} item={item} />
+                  aria-label={`Go to slide ${index + 1}`}
+                ></button>
               ))}
             </div>
-
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            )}
           </>
         )}
-
-        {/* No Results */}
-        {!loading && !error && searchQuery && searchResults.length === 0 && (
-          <div className="text-center py-20">
-            <p className="text-xl text-white mb-2">No results found</p>
-            <p className="text-gray-400">
-              We couldn't find anything matching "{searchQuery}". Try different
-              keywords or check for typos.
-            </p>
-          </div>
-        )}
-
-        {/* Popular Movies - When no search query */}
-        {!loading && !searchQuery && (
-          <div>
-            <h2 className="text-xl text-white mb-4 font-medium">
-              Popular Movies
-            </h2>
-
-            {/* Loading State for Popular Movies */}
-            {loadingPopular && (
-              <div className="flex justify-center items-center py-10">
-                <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin mb-3"></div>
-                  <p className="text-gray-400">Loading popular movies...</p>
-                </div>
-              </div>
-            )}
-
-            {/* Popular Movies Result Count */}
-            {!loadingPopular && popularMovies.length > 0 && (
-              <div className="flex justify-between items-center mb-4">
-                <p className="text-gray-400 text-xs">
-                  {totalResults.toLocaleString()} movies found • Page{' '}
-                  {currentPage} of {totalPages}
-                </p>
-              </div>
-            )}
-
-            {/* Popular Movies Grid */}
-            {!loadingPopular && popularMovies.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 md:gap-3">
-                {popularMovies.map((movie) => (
-                  <ResultCard key={`movie-${movie.id}`} item={movie} />
-                ))}
-              </div>
-            )}
-
-            {/* Pagination for Popular Movies */}
-            {!loadingPopular && popularMovies.length > 0 && totalPages > 1 && (
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            )}
-          </div>
-        )}
       </div>
-    </div>
-  )
-}
-
-function ResultCard({ item }) {
-  const [imageLoaded, setImageLoaded] = useState(false)
-
-  // Different card renderings based on media type
-  if (item.type === 'person') {
-    // Skip rendering if no profile path
-    if (!item.posterPath) return null
-
-    return (
-      <Link
-        to={`/person/${item.id}`}
-        className="block bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200 cursor-pointer h-full"
-      >
-        <div className="w-full h-40 overflow-hidden relative">
-          {!imageLoaded && (
-            <div className="absolute inset-0 bg-[#333] flex items-center justify-center">
-              <div className="w-8 h-8 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
-            </div>
-          )}
-          <img
-            src={`https://image.tmdb.org/t/p/w185${item.posterPath}`}
-            alt={item.title}
-            className={`w-full h-full object-cover object-top transition-opacity duration-300 ${
-              imageLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
-            onLoad={() => setImageLoaded(true)}
-            loading="lazy"
-          />
-        </div>
-        <div className="p-2">
-          <h3 className="text-sm text-gray-200 font-medium truncate">
-            {item.title}
-          </h3>
-          <p className="text-[#5ccfee] text-xs">{item.knownFor}</p>
-          {item.knownForTitles && (
-            <p className="text-gray-400 text-xs line-clamp-1 mt-0.5">
-              {item.knownForTitles}
-            </p>
-          )}
-        </div>
-      </Link>
     )
   }
 
-  // Movie or TV Show card
-  // Skip rendering if no poster path
-  if (!item.posterPath) return null
+  // Filter the results based on activeTab
+  const filteredResults = useMemo(() => {
+    const results = searchQuery ? searchResults : popularMovies
+
+    if (activeTab === 'all') return results
+
+    return results.filter(
+      (item) => item.type === activeTab || item.media_type === activeTab
+    )
+  }, [searchQuery, searchResults, popularMovies, activeTab])
 
   return (
-    <Link
-      to={`/${item.type}/${item.id}`}
-      className="block bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200 cursor-pointer h-full"
-    >
-      <div className="aspect-[2/3] relative">
-        {!imageLoaded && (
-          <div className="absolute inset-0 bg-[#333] flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        )}
-        <img
-          src={`https://image.tmdb.org/t/p/w342${item.posterPath}`}
-          alt={item.title}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${
-            imageLoaded ? 'opacity-100' : 'opacity-0'
-          }`}
-          onLoad={() => setImageLoaded(true)}
-          loading="lazy"
-        />
-        {item.rating && (
-          <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
-            <span className="text-[#5ccfee]">{item.rating}</span>
-          </div>
-        )}
-        <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[#5ccfee] font-medium truncate max-w-[70%]">
-              {item.genre}
-            </span>
-            <span className="text-xs text-gray-300">{item.year}</span>
-          </div>
+    <div className="container mx-auto px-4 py-6">
+      {/* Back button */}
+      <button
+        onClick={handleGoBack}
+        className="mb-4 flex items-center text-gray-400 hover:text-white"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-5 w-5 mr-1"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+          />
+        </svg>
+        Back
+      </button>
+
+      {/* Search Form */}
+      <form onSubmit={handleSearch} className="mb-8">
+        <div className="flex">
+          <input
+            type="text"
+            name="searchQuery"
+            defaultValue={searchQuery}
+            placeholder="Search for movies, TV shows, or people..."
+            className="flex-grow p-3 bg-[#1e1e1e] text-white border border-[#2a2a2a] rounded-l-md focus:outline-none focus:ring-2 focus:ring-[#5ccfee]"
+          />
+          <button
+            type="submit"
+            className="bg-[#5ccfee] text-black px-6 py-3 rounded-r-md font-medium hover:bg-[#4abfe0] transition-colors"
+          >
+            Search
+          </button>
         </div>
+      </form>
+
+      {/* Featured Content */}
+      {!searchQuery && !isGenreSearch && featured && (
+        <Featured movie={featured} />
+      )}
+
+      {/* Tab Navigation */}
+      <div className="flex border-b border-[#2a2a2a] mb-6">
+        <button
+          onClick={() => {
+            setActiveTab('all')
+            setCurrentPage(1)
+          }}
+          className={`py-2 px-4 font-medium ${
+            activeTab === 'all'
+              ? 'text-[#5ccfee] border-b-2 border-[#5ccfee]'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('movie')
+            setCurrentPage(1)
+          }}
+          className={`py-2 px-4 font-medium ${
+            activeTab === 'movie'
+              ? 'text-[#5ccfee] border-b-2 border-[#5ccfee]'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          Movies
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('tv')
+            setCurrentPage(1)
+          }}
+          className={`py-2 px-4 font-medium ${
+            activeTab === 'tv'
+              ? 'text-[#5ccfee] border-b-2 border-[#5ccfee]'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          TV Shows
+        </button>
       </div>
-      <div className="p-2">
-        <h3 className="text-sm text-gray-200 font-medium truncate">
-          {item.title}
-        </h3>
+
+      {/* Error Message */}
+      {error && <div className="text-red-500 mb-4">{error}</div>}
+
+      {/* Search Results or Popular Content */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4 text-white">
+          {searchQuery
+            ? `Search results for "${searchQuery}"`
+            : isGenreSearch
+            ? `${genreMap[searchQuery.split('-')[1]] || 'Genre'} ${
+                activeTab === 'tv' ? 'TV Shows' : 'Movies'
+              }`
+            : 'Popular Content'}
+          {totalResults > 0 && (
+            <span className="text-sm font-normal text-gray-400 ml-2">
+              ({totalResults} results)
+            </span>
+          )}
+        </h2>
+
+        {/* Loading state */}
+        {(loading || loadingPopular) && (
+          <div className="flex justify-center my-20">
+            <div className="w-12 h-12 border-4 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
+
+        {/* No results state */}
+        {!loading && !loadingPopular && filteredResults.length === 0 && (
+          <div className="text-center my-20 text-gray-400">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-16 w-16 mx-auto mb-4 text-gray-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <p className="text-xl">No results found</p>
+            <p className="mt-2">
+              Try different keywords or browse popular content
+            </p>
+          </div>
+        )}
+
+        {/* Results grid */}
+        {!loading && !loadingPopular && filteredResults.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+            {filteredResults.map((item) => (
+              <ResultCard key={`${item.type}-${item.id}`} item={item} />
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        )}
       </div>
-    </Link>
+    </div>
   )
 }
 

@@ -1,6 +1,33 @@
 // API service for TMDB movie data
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY
 const BASE_URL = import.meta.env.VITE_API_BASE_URL
+const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p'
+
+/**
+ * Fetch data from the TMDB API
+ * @param {string} endpoint - The API endpoint to fetch
+ * @param {Object} params - Additional query parameters
+ * @returns {Promise<Object>} The API response data
+ */
+async function fetchFromAPI(endpoint, params = {}) {
+  try {
+    const queryParams = new URLSearchParams({
+      api_key: API_KEY,
+      ...params,
+    }).toString()
+
+    const response = await fetch(`${BASE_URL}${endpoint}?${queryParams}`)
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText}`)
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error(`Error fetching from ${endpoint}:`, error)
+    return null
+  }
+}
 
 /**
  * Fetch trending movies and TV shows
@@ -9,15 +36,20 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL
  * @returns {Promise<Object>} The trending results
  */
 export const fetchTrending = async (mediaType = 'all', timeWindow = 'week') => {
-  try {
-    const response = await fetch(
-      `${BASE_URL}/trending/${mediaType}/${timeWindow}?api_key=${API_KEY}`
-    )
-    return await response.json()
-  } catch (error) {
-    console.error('Error fetching trending:', error)
-    return { results: [] }
-  }
+  const data = await fetchFromAPI(`/trending/${mediaType}/${timeWindow}`)
+  return data || { results: [] }
+}
+
+/**
+ * Fetch details for a movie or TV show
+ * @param {string} type - 'movie' or 'tv'
+ * @param {number} id - Item ID
+ * @returns {Promise<Object>} Item details
+ */
+export const fetchMediaDetails = async (type, id) => {
+  return await fetchFromAPI(`/${type}/${id}`, {
+    append_to_response: 'credits,similar,videos',
+  })
 }
 
 /**
@@ -26,15 +58,7 @@ export const fetchTrending = async (mediaType = 'all', timeWindow = 'week') => {
  * @returns {Promise<Object>} Movie details
  */
 export const fetchMovieDetails = async (id) => {
-  try {
-    const response = await fetch(
-      `${BASE_URL}/movie/${id}?api_key=${API_KEY}&append_to_response=credits,similar,videos`
-    )
-    return await response.json()
-  } catch (error) {
-    console.error('Error fetching movie details:', error)
-    return null
-  }
+  return await fetchMediaDetails('movie', id)
 }
 
 /**
@@ -43,71 +67,39 @@ export const fetchMovieDetails = async (id) => {
  * @returns {Promise<Object>} TV show details
  */
 export const fetchShowDetails = async (id) => {
-  try {
-    const response = await fetch(
-      `${BASE_URL}/tv/${id}?api_key=${API_KEY}&append_to_response=credits,similar,videos`
-    )
-    return await response.json()
-  } catch (error) {
-    console.error('Error fetching show details:', error)
-    return null
-  }
+  return await fetchMediaDetails('tv', id)
+}
+
+/**
+ * Fetch media with filters
+ * @param {string} type - 'movie' or 'tv'
+ * @param {Object} filters - Filter parameters
+ * @param {number} page - Page number
+ * @returns {Promise<Object>} Filtered results with pagination info
+ */
+export const fetchMedia = async (type, filters = {}, page = 1) => {
+  const data = await fetchFromAPI(`/discover/${type}`, { page, ...filters })
+  return data || { results: [], total_pages: 0, total_results: 0, page }
 }
 
 /**
  * Fetch movies with filters
  * @param {Object} filters - Filter parameters
  * @param {number} page - Page number
- * @param {number} resultsPerPage - Number of results per page (max 50)
  * @returns {Promise<Object>} Filtered movie results with pagination info
  */
-export const fetchMovies = async (
-  filters = {},
-  page = 1,
-  resultsPerPage = 50
-) => {
-  try {
-    const queryParams = new URLSearchParams({
-      api_key: API_KEY,
-      page: page,
-      ...filters,
-    }).toString()
-
-    const response = await fetch(`${BASE_URL}/discover/movie?${queryParams}`)
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error('Error fetching movies:', error)
-    return { results: [], total_pages: 0, total_results: 0, page: page }
-  }
+export const fetchMovies = async (filters = {}, page = 1) => {
+  return await fetchMedia('movie', filters, page)
 }
 
 /**
  * Fetch TV shows with filters
  * @param {Object} filters - Filter parameters
  * @param {number} page - Page number
- * @param {number} resultsPerPage - Number of results per page (max 50)
  * @returns {Promise<Object>} Filtered TV show results with pagination info
  */
-export const fetchShows = async (
-  filters = {},
-  page = 1,
-  resultsPerPage = 50
-) => {
-  try {
-    const queryParams = new URLSearchParams({
-      api_key: API_KEY,
-      page: page,
-      ...filters,
-    }).toString()
-
-    const response = await fetch(`${BASE_URL}/discover/tv?${queryParams}`)
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error('Error fetching shows:', error)
-    return { results: [], total_pages: 0, total_results: 0, page: page }
-  }
+export const fetchShows = async (filters = {}, page = 1) => {
+  return await fetchMedia('tv', filters, page)
 }
 
 /**
@@ -116,16 +108,8 @@ export const fetchShows = async (
  * @returns {Promise<Array>} Genres list
  */
 export const fetchGenres = async (type = 'movie') => {
-  try {
-    const response = await fetch(
-      `${BASE_URL}/genre/${type}/list?api_key=${API_KEY}`
-    )
-    const data = await response.json()
-    return data.genres || []
-  } catch (error) {
-    console.error('Error fetching genres:', error)
-    return []
-  }
+  const data = await fetchFromAPI(`/genre/${type}/list`)
+  return data?.genres || []
 }
 
 /**
@@ -136,17 +120,14 @@ export const fetchGenres = async (type = 'movie') => {
  * @returns {Promise<Object>} Search results
  */
 export const searchMedia = async (query, type = 'multi', page = 1) => {
-  try {
-    const response = await fetch(
-      `${BASE_URL}/search/${type}?api_key=${API_KEY}&query=${encodeURIComponent(
-        query
-      )}&page=${page}`
-    )
-    return await response.json()
-  } catch (error) {
-    console.error('Error searching media:', error)
-    return { results: [] }
-  }
+  if (!query) return { results: [] }
+
+  const data = await fetchFromAPI(`/search/${type}`, {
+    query: encodeURIComponent(query),
+    page,
+  })
+
+  return data || { results: [] }
 }
 
 /**
@@ -156,18 +137,7 @@ export const searchMedia = async (query, type = 'multi', page = 1) => {
  * @returns {Promise<Object>} Formatted search results with pagination info
  */
 export const searchTMDB = async (query, page = 1) => {
-  try {
-    const response = await fetch(
-      `${BASE_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(
-        query
-      )}&page=${page}`
-    )
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error('Error searching TMDB:', error)
-    return { results: [], total_pages: 0, total_results: 0, page: page }
-  }
+  return await searchMedia(query, 'multi', page)
 }
 
 /**
@@ -178,16 +148,9 @@ export const searchTMDB = async (query, page = 1) => {
  * @returns {Promise<Object>} Content with the specified genre, with pagination info
  */
 export const searchByGenre = async (genreId, mediaType = 'movie', page = 1) => {
-  try {
-    const response = await fetch(
-      `${BASE_URL}/discover/${mediaType}?api_key=${API_KEY}&with_genres=${genreId}&page=${page}`
-    )
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error(`Error searching ${mediaType} by genre:`, error)
-    return { results: [], total_pages: 0, total_results: 0, page: page }
-  }
+  if (!genreId) return { results: [] }
+
+  return await fetchMedia(mediaType, { with_genres: genreId }, page)
 }
 
 /**
@@ -196,60 +159,18 @@ export const searchByGenre = async (genreId, mediaType = 'movie', page = 1) => {
  * @returns {Promise<Object>} Person details
  */
 export const fetchPersonDetails = async (id) => {
-  try {
-    const response = await fetch(
-      `${BASE_URL}/person/${id}?api_key=${API_KEY}&append_to_response=combined_credits`
-    )
-    return await response.json()
-  } catch (error) {
-    console.error('Error fetching person details:', error)
-    return null
-  }
-}
-
-/**
- * Helper function to preload images
- * @param {string} src - The image URL to preload
- * @returns {Promise} - Promise that resolves when the image is loaded or rejects on error
- */
-export const preloadImage = (src) => {
-  return new Promise((resolve, reject) => {
-    if (!src) {
-      reject(new Error('No image source provided'))
-      return
-    }
-
-    const img = new Image()
-    img.onload = () => resolve(src)
-    img.onerror = () => reject(new Error(`Failed to load image: ${src}`))
-    img.src = src
+  return await fetchFromAPI(`/person/${id}`, {
+    append_to_response: 'combined_credits',
   })
 }
 
 /**
- * Preload multiple images
- * @param {Array<string>} sources - Array of image URLs to preload
- * @returns {Promise} - Promise that resolves when all images are loaded, with an array of results
- */
-export const preloadImages = (sources = []) => {
-  if (!sources.length) return Promise.resolve([])
-
-  // Create an array of promises from the sources
-  const promises = sources
-    .filter((src) => src) // Filter out null/undefined sources
-    .map((src) => preloadImage(src).catch(() => null)) // Handle individual failures
-
-  // Return a promise that resolves when all promises are settled
-  return Promise.allSettled(promises)
-}
-
-/**
- * Helper function to generate proper TMDB image URLs
+ * Generate proper TMDB image URLs
  * @param {string} path - The image path from TMDB
  * @param {string} size - The size of the image (w500, original, etc.)
- * @returns {string|null} - Full image URL or null if path is invalid
+ * @returns {string|null} - Full image URL or fallback image if path is invalid
  */
 export const getTMDBImageUrl = (path, size = 'w500') => {
   if (!path) return null
-  return `https://image.tmdb.org/t/p/${size}${path}`
+  return `${IMAGE_BASE_URL}/${size}${path}`
 }
