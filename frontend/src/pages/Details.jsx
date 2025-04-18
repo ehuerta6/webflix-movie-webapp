@@ -13,7 +13,8 @@ const isValidContent = (item) => {
     (item.poster_path || item.backdrop_path) &&
     item.overview &&
     item.overview.trim() !== '' &&
-    item.vote_average !== undefined
+    item.vote_average !== undefined &&
+    item.vote_average > 0
 
   // For similar content items, we need less strict validation
   if (item.belongs_to_collection || item.similar) {
@@ -26,9 +27,16 @@ const isValidContent = (item) => {
     return hasBasics && item.release_date && item.release_date.trim() !== ''
   }
 
-  // TV shows need first air date
+  // TV shows need first air date and basic information
   if (item.media_type === 'tv') {
-    return hasBasics && item.first_air_date && item.first_air_date.trim() !== ''
+    return (
+      hasBasics &&
+      item.first_air_date &&
+      item.first_air_date.trim() !== '' &&
+      // Ensure we have at least some episode information
+      (item.number_of_episodes !== undefined ||
+        item.number_of_seasons !== undefined)
+    )
   }
 
   return hasBasics
@@ -119,6 +127,8 @@ function Details() {
             ? data.production_companies.map((company) => company.name)
             : [],
           trailer: getTrailerUrl(data.videos),
+          number_of_seasons: data.number_of_seasons,
+          number_of_episodes: data.number_of_episodes,
         }
 
         setDetails(formattedDetails)
@@ -366,13 +376,47 @@ function Details() {
                   {details.genres.join(', ')}
                 </div>
 
-                {details.runtime && (
+                {/* Movie runtime */}
+                {type === 'movie' && details.runtime && (
                   <>
                     <div className="w-px h-5 bg-gray-700"></div>
                     <div className="text-gray-300 text-sm">
-                      {Math.floor(details.runtime / 60)}h {details.runtime % 60}
-                      m
+                      {Math.floor(details.runtime / 60) > 0
+                        ? `${Math.floor(details.runtime / 60)}h ${
+                            details.runtime % 60 > 0
+                              ? `${details.runtime % 60}m`
+                              : ''
+                          }`
+                        : `${details.runtime}m`}
                     </div>
+                  </>
+                )}
+
+                {/* TV show details */}
+                {type === 'tv' && (
+                  <>
+                    {details.number_of_seasons && (
+                      <>
+                        <div className="w-px h-5 bg-gray-700"></div>
+                        <div className="text-gray-300 text-sm">
+                          {details.number_of_seasons}{' '}
+                          {details.number_of_seasons === 1
+                            ? 'Season'
+                            : 'Seasons'}
+                        </div>
+                      </>
+                    )}
+                    {details.number_of_episodes && (
+                      <>
+                        <div className="w-px h-5 bg-gray-700"></div>
+                        <div className="text-gray-300 text-sm">
+                          {details.number_of_episodes}{' '}
+                          {details.number_of_episodes === 1
+                            ? 'Episode'
+                            : 'Episodes'}
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -414,22 +458,6 @@ function Details() {
                     />
                   </svg>
                 </button>
-                <button className="secondary-button">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                    />
-                  </svg>
-                </button>
               </div>
 
               {/* Additional Info Grid */}
@@ -460,7 +488,18 @@ function Details() {
                   </>
                 )}
 
-                <div className="col-span-2">
+                {type === 'tv' && details.number_of_seasons && (
+                  <div>
+                    <h3 className="text-gray-400 mb-1">First Air Date</h3>
+                    <p className="text-white">{details.year}</p>
+                  </div>
+                )}
+
+                <div
+                  className={
+                    type === 'tv' ? 'col-span-2 md:col-span-3' : 'col-span-2'
+                  }
+                >
                   <h3 className="text-gray-400 mb-1">Production</h3>
                   <p className="text-white">
                     {details.productionCompanies.join(', ') || 'Unknown'}

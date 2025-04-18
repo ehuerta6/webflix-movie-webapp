@@ -7,7 +7,114 @@ import {
   searchByGenre,
   fetchMovies,
   fetchShows,
+  fetchTrending,
 } from '../services/api'
+
+// Pagination component
+const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+  // Calculate pagination range
+  const getPageNumbers = () => {
+    const pageNumbers = []
+    const maxPagesToShow = 5
+    const halfRange = Math.floor(maxPagesToShow / 2)
+
+    let startPage = Math.max(currentPage - halfRange, 1)
+    let endPage = Math.min(startPage + maxPagesToShow - 1, totalPages)
+
+    if (endPage - startPage + 1 < maxPagesToShow) {
+      startPage = Math.max(endPage - maxPagesToShow + 1, 1)
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(i)
+    }
+
+    return pageNumbers
+  }
+
+  return (
+    <div className="flex justify-center items-center space-x-2 mt-10">
+      {/* Previous Page Button */}
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className={`px-3 py-1 rounded-md text-sm ${
+          currentPage === 1
+            ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+            : 'bg-[#1e1e1e] text-white hover:bg-[#2e2e2e]'
+        }`}
+      >
+        ← Prev
+      </button>
+
+      {/* First Page */}
+      {getPageNumbers()[0] > 1 && (
+        <>
+          <button
+            onClick={() => onPageChange(1)}
+            className={`px-3 py-1 rounded-md text-sm ${
+              currentPage === 1
+                ? 'bg-[#5ccfee] text-black font-medium'
+                : 'bg-[#1e1e1e] text-white hover:bg-[#2e2e2e]'
+            }`}
+          >
+            1
+          </button>
+          {getPageNumbers()[0] > 2 && (
+            <span className="text-gray-500">...</span>
+          )}
+        </>
+      )}
+
+      {/* Page Numbers */}
+      {getPageNumbers().map((pageNumber) => (
+        <button
+          key={pageNumber}
+          onClick={() => onPageChange(pageNumber)}
+          className={`px-3 py-1 rounded-md text-sm ${
+            currentPage === pageNumber
+              ? 'bg-[#5ccfee] text-black font-medium'
+              : 'bg-[#1e1e1e] text-white hover:bg-[#2e2e2e]'
+          }`}
+        >
+          {pageNumber}
+        </button>
+      ))}
+
+      {/* Last Page */}
+      {getPageNumbers()[getPageNumbers().length - 1] < totalPages && (
+        <>
+          {getPageNumbers()[getPageNumbers().length - 1] < totalPages - 1 && (
+            <span className="text-gray-500">...</span>
+          )}
+          <button
+            onClick={() => onPageChange(totalPages)}
+            className={`px-3 py-1 rounded-md text-sm ${
+              currentPage === totalPages
+                ? 'bg-[#5ccfee] text-black font-medium'
+                : 'bg-[#1e1e1e] text-white hover:bg-[#2e2e2e]'
+            }`}
+          >
+            {totalPages}
+          </button>
+        </>
+      )}
+
+      {/* Next Page Button */}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className={`px-3 py-1 rounded-md text-sm ${
+          currentPage === totalPages
+            ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+            : 'bg-[#1e1e1e] text-white hover:bg-[#2e2e2e]'
+        }`}
+      >
+        Next →
+      </button>
+    </div>
+  )
+}
 
 function SearchPage() {
   const location = useLocation()
@@ -16,14 +123,48 @@ function SearchPage() {
   const searchQuery = queryParams.get('q') || ''
 
   const [searchResults, setSearchResults] = useState([])
+  const [popularMovies, setPopularMovies] = useState([])
   const [activeTab, setActiveTab] = useState('all')
   const [loading, setLoading] = useState(false)
+  const [loadingPopular, setLoadingPopular] = useState(false)
   const [error, setError] = useState(null)
   const [genreMap, setGenreMap] = useState({})
   const [genreList, setGenreList] = useState([])
   const [isGenreSearch, setIsGenreSearch] = useState(false)
-  const [page, setPage] = useState(1)
-  const [hasMore, setHasMore] = useState(false)
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalResults, setTotalResults] = useState(0)
+  const ITEMS_PER_PAGE = 20
+
+  // Helper function to validate if content has required information
+  const isValidContent = (item) => {
+    if (!item) return false
+
+    // Basic requirements for all types
+    const hasIdentifier = item.id > 0
+    const hasTitle = item.title || item.name
+
+    // Different validations based on media type
+    if (item.media_type === 'movie') {
+      // For movies: need at least title and either poster or overview
+      return hasIdentifier && hasTitle && (item.poster_path || item.overview)
+    } else if (item.media_type === 'tv') {
+      // For TV shows: need at least title and either poster or overview
+      return hasIdentifier && hasTitle && (item.poster_path || item.overview)
+    } else if (item.media_type === 'person') {
+      // For people: need at least name and profile path
+      return hasIdentifier && hasTitle && item.profile_path
+    }
+
+    // If media_type is not specified, use generic validation
+    return (
+      hasIdentifier &&
+      hasTitle &&
+      (item.poster_path || item.profile_path || item.overview)
+    )
+  }
 
   // Load genres for proper display and search
   useEffect(() => {
@@ -63,6 +204,63 @@ function SearchPage() {
     loadGenres()
   }, [])
 
+  // Load popular movies for default view
+  useEffect(() => {
+    const loadPopularMovies = async () => {
+      if (!searchQuery) {
+        setLoadingPopular(true)
+        try {
+          // Fetch popular movies
+          const response = await fetchTrending(
+            'movie',
+            'day',
+            currentPage,
+            ITEMS_PER_PAGE
+          )
+
+          if (response.results && response.results.length > 0) {
+            // Update pagination information
+            setTotalPages(
+              response.total_pages > 500 ? 500 : response.total_pages
+            )
+            setTotalResults(response.total_results)
+
+            // Filter only valid content
+            const validResults = response.results.filter(isValidContent)
+
+            // Format movie data for display
+            const formattedMovies = validResults.map((movie) => ({
+              id: movie.id,
+              type: 'movie',
+              title: movie.title,
+              posterPath: movie.poster_path,
+              rating: movie.vote_average ? movie.vote_average.toFixed(1) : null,
+              year: movie.release_date
+                ? movie.release_date.substring(0, 4)
+                : 'Unknown',
+              genre:
+                movie.genre_ids && movie.genre_ids.length > 0
+                  ? genreMap[movie.genre_ids[0]] || 'Unknown'
+                  : 'Unknown',
+              description: movie.overview,
+            }))
+
+            setPopularMovies(formattedMovies)
+          }
+        } catch (err) {
+          console.error('Error loading popular movies:', err)
+        } finally {
+          setLoadingPopular(false)
+        }
+      }
+    }
+
+    // Only load popular movies if genreMap is loaded
+    if (Object.keys(genreMap).length > 0) {
+      loadPopularMovies()
+    }
+  }, [searchQuery, genreMap, currentPage])
+
   // Check if the query is a genre name
   const isGenreQuery = useMemo(() => {
     if (!searchQuery || Object.keys(genreMap).length === 0) return false
@@ -92,6 +290,8 @@ function SearchPage() {
 
       try {
         let results = []
+        let totalResults = 0
+        let totalPages = 0
 
         // Check if the search query matches any genre names
         const lowerCaseQuery = searchQuery.toLowerCase()
@@ -105,23 +305,57 @@ function SearchPage() {
           const genreId = matchingGenres[0].id
 
           // Fetch movies with this genre
-          const movieResults = await searchByGenre(genreId, 'movie')
+          const movieData = await searchByGenre(
+            genreId,
+            'movie',
+            currentPage,
+            ITEMS_PER_PAGE / 2
+          )
           // Fetch TV shows with this genre
-          const tvResults = await searchByGenre(genreId, 'tv')
+          const tvData = await searchByGenre(
+            genreId,
+            'tv',
+            currentPage,
+            ITEMS_PER_PAGE / 2
+          )
 
-          // Combine and add media_type
+          // Combine results and add media_type
+          const movieResults = movieData.results || []
+          const tvResults = tvData.results || []
+
+          // Update pagination information (combining both sets)
+          totalResults = Math.max(
+            movieData.total_results || 0,
+            tvData.total_results || 0
+          )
+          totalPages = Math.max(
+            movieData.total_pages || 0,
+            tvData.total_pages || 0
+          )
+
+          // Combine and add media_type, then filter for valid content only
           results = [
             ...movieResults.map((item) => ({ ...item, media_type: 'movie' })),
             ...tvResults.map((item) => ({ ...item, media_type: 'tv' })),
-          ]
-
-          // Set if we have more results than shown
-          setHasMore(movieResults.length + tvResults.length >= 40)
+          ].filter(isValidContent)
         } else {
-          // Regular search
-          results = await searchTMDB(searchQuery, page)
-          setHasMore(results.length >= 20)
+          // Regular search with pagination
+          const searchData = await searchTMDB(
+            searchQuery,
+            currentPage,
+            ITEMS_PER_PAGE
+          )
+          // Filter for valid content only
+          results = (searchData.results || []).filter(isValidContent)
+
+          // Update pagination information
+          totalResults = searchData.total_results || 0
+          totalPages = searchData.total_pages || 0
         }
+
+        // Update state with pagination info
+        setTotalResults(totalResults)
+        setTotalPages(totalPages > 500 ? 500 : totalPages) // TMDB API limits to 500 pages
 
         // Format search results for our UI
         const formattedResults = results.map((item) => {
@@ -168,6 +402,7 @@ function SearchPage() {
               knownFor: item.known_for_department || 'Acting',
               knownForTitles: item.known_for
                 ? item.known_for
+                    .filter(isValidContent)
                     .map((work) => work.title || work.name)
                     .join(', ')
                 : '',
@@ -190,7 +425,7 @@ function SearchPage() {
     if (Object.keys(genreMap).length > 0) {
       performSearch()
     }
-  }, [searchQuery, genreMap, page, genreList, isGenreQuery])
+  }, [searchQuery, genreMap, currentPage, genreList, isGenreQuery])
 
   // Filter results based on active tab
   const filteredResults =
@@ -205,14 +440,18 @@ function SearchPage() {
 
     if (searchValue) {
       // Reset page when performing a new search
-      setPage(1)
+      setCurrentPage(1)
       navigate(`/search?q=${encodeURIComponent(searchValue)}`)
     }
   }
 
-  // Load more results
-  const handleLoadMore = () => {
-    setPage((prevPage) => prevPage + 1)
+  // Handle page change
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage)
+      // Scroll to top when changing pages
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }
 
   return (
@@ -250,8 +489,32 @@ function SearchPage() {
           </div>
         </form>
 
-        {/* Loading State */}
-        {loading && page === 1 && (
+        {/* Genre suggestions moved to top */}
+        {!searchQuery && genreList.length > 0 && (
+          <div className="mb-10 py-4 border-y border-gray-800">
+            <h2 className="text-white mb-4 text-lg font-medium">
+              Explore by genre
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {genreList
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((genre) => (
+                  <button
+                    key={genre.id}
+                    onClick={() =>
+                      navigate(`/search?q=${encodeURIComponent(genre.name)}`)
+                    }
+                    className="px-3 py-1.5 bg-[#1e1e1e] hover:bg-[#2e2e2e] text-gray-300 text-sm rounded-md border border-gray-700 transition-colors duration-200"
+                  >
+                    {genre.name}
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* Loading State for Search */}
+        {loading && currentPage === 1 && (
           <div className="flex justify-center items-center py-20">
             <div className="flex flex-col items-center">
               <div className="w-8 h-8 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -278,12 +541,13 @@ function SearchPage() {
               <p className="text-gray-400 text-sm mb-2 sm:mb-0">
                 {isGenreSearch ? (
                   <span>
-                    Showing {filteredResults.length} results for genre "
-                    {searchQuery}"
+                    {totalResults.toLocaleString()} results for genre "
+                    {searchQuery}" • Page {currentPage} of {totalPages}
                   </span>
                 ) : (
                   <span>
-                    Found {filteredResults.length} results for "{searchQuery}"
+                    {totalResults.toLocaleString()} results for "{searchQuery}"
+                    • Page {currentPage} of {totalPages}
                   </span>
                 )}
               </p>
@@ -333,24 +597,34 @@ function SearchPage() {
               </div>
             </div>
 
+            {/* Loading overlay for page changes */}
+            {loading && currentPage > 1 && (
+              <div className="relative mb-4">
+                <div className="absolute inset-0 bg-[#121212]/70 backdrop-blur-sm flex justify-center items-center z-10 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-5 h-5 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin mr-2"></div>
+                    <p className="text-gray-400 text-sm">
+                      Loading page {currentPage}...
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Results Grid - More compact layout */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 md:gap-3">
               {filteredResults.map((item) => (
                 <ResultCard key={`${item.type}-${item.id}`} item={item} />
               ))}
             </div>
 
-            {/* Load More Button */}
-            {hasMore && (
-              <div className="mt-8 text-center">
-                <button
-                  onClick={handleLoadMore}
-                  className="px-6 py-2 bg-[#1e1e1e] hover:bg-[#2e2e2e] border border-gray-700 text-white rounded-md focus:outline-none text-sm transition-colors duration-200"
-                  disabled={loading}
-                >
-                  {loading ? 'Loading...' : 'Load More'}
-                </button>
-              </div>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
             )}
           </>
         )}
@@ -366,34 +640,63 @@ function SearchPage() {
           </div>
         )}
 
-        {/* Initial State - No Search Yet */}
+        {/* Popular Movies - When no search query */}
         {!loading && !searchQuery && (
-          <div className="text-center py-20">
-            <p className="text-xl text-white mb-2">
-              What are you looking for today?
-            </p>
-            <p className="text-gray-400">
-              Search for movies, TV shows, actors or genres
-            </p>
+          <div>
+            <h2 className="text-xl text-white mb-4 font-medium">
+              Popular Movies
+            </h2>
 
-            {/* Genre suggestions for quick access */}
-            {genreList.length > 0 && (
-              <div className="mt-6">
-                <p className="text-gray-400 mb-3 text-sm">Popular genres:</p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {genreList.slice(0, 12).map((genre) => (
-                    <button
-                      key={genre.id}
-                      onClick={() =>
-                        navigate(`/search?q=${encodeURIComponent(genre.name)}`)
-                      }
-                      className="px-3 py-1 bg-[#1e1e1e] hover:bg-[#2e2e2e] text-gray-300 text-xs rounded-full border border-gray-700"
-                    >
-                      {genre.name}
-                    </button>
-                  ))}
+            {/* Loading State for Popular Movies */}
+            {loadingPopular && currentPage === 1 && (
+              <div className="flex justify-center items-center py-10">
+                <div className="flex flex-col items-center">
+                  <div className="w-8 h-8 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin mb-3"></div>
+                  <p className="text-gray-400">Loading popular movies...</p>
                 </div>
               </div>
+            )}
+
+            {/* Loading overlay for page changes */}
+            {loadingPopular && currentPage > 1 && (
+              <div className="relative mb-4">
+                <div className="absolute inset-0 bg-[#121212]/70 backdrop-blur-sm flex justify-center items-center z-10 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-5 h-5 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin mr-2"></div>
+                    <p className="text-gray-400 text-sm">
+                      Loading page {currentPage}...
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Popular Movies Result Count */}
+            {!loadingPopular && popularMovies.length > 0 && (
+              <div className="flex justify-between items-center mb-4">
+                <p className="text-gray-400 text-xs">
+                  {totalResults.toLocaleString()} movies found • Page{' '}
+                  {currentPage} of {totalPages}
+                </p>
+              </div>
+            )}
+
+            {/* Popular Movies Grid */}
+            {!loadingPopular && popularMovies.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 md:gap-3">
+                {popularMovies.map((movie) => (
+                  <ResultCard key={`movie-${movie.id}`} item={movie} />
+                ))}
+              </div>
+            )}
+
+            {/* Pagination for Popular Movies */}
+            {!loadingPopular && popularMovies.length > 0 && totalPages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
             )}
           </div>
         )}
@@ -408,10 +711,10 @@ function ResultCard({ item }) {
     return (
       <Link
         to={`/person/${item.id}`}
-        className="bg-[#1e1e1e] rounded-md overflow-hidden hover:translate-y-[-4px] transition-transform duration-200"
+        className="bg-[#1e1e1e] rounded-md overflow-hidden hover:translate-y-[-2px] transition-transform duration-200"
       >
         <div className="flex h-full flex-col">
-          <div className="w-full h-28 overflow-hidden">
+          <div className="w-full h-24 overflow-hidden">
             <img
               src={
                 item.posterPath
@@ -426,13 +729,13 @@ function ResultCard({ item }) {
               }}
             />
           </div>
-          <div className="p-2 flex-1">
-            <h3 className="text-white text-sm font-medium mb-0.5 line-clamp-1">
+          <div className="p-1.5 flex-1">
+            <h3 className="text-white text-xs font-medium mb-0.5 line-clamp-1">
               {item.title}
             </h3>
-            <p className="text-[#5ccfee] text-xs mb-1">{item.knownFor}</p>
+            <p className="text-[#5ccfee] text-[10px] mb-0.5">{item.knownFor}</p>
             {item.knownForTitles && (
-              <p className="text-gray-400 text-xs line-clamp-1">
+              <p className="text-gray-400 text-[10px] line-clamp-1">
                 {item.knownForTitles}
               </p>
             )}
@@ -446,13 +749,13 @@ function ResultCard({ item }) {
   return (
     <Link
       to={`/${item.type}/${item.id}`}
-      className="bg-[#1e1e1e] rounded-md overflow-hidden hover:translate-y-[-4px] transition-transform duration-200"
+      className="bg-[#1e1e1e] rounded-md overflow-hidden hover:translate-y-[-2px] transition-transform duration-200"
     >
       <div className="aspect-[2/3] relative">
         <img
           src={
             item.posterPath
-              ? `https://image.tmdb.org/t/p/w342${item.posterPath}`
+              ? `https://image.tmdb.org/t/p/w185${item.posterPath}`
               : placeholderImg
           }
           alt={item.title}
@@ -463,21 +766,21 @@ function ResultCard({ item }) {
           }}
         />
         {item.rating && (
-          <div className="absolute top-0 right-0 bg-black/60 px-1 py-0.5 m-1 rounded text-xs">
+          <div className="absolute top-0 right-0 bg-black/60 px-1 py-0.5 m-0.5 rounded text-[10px]">
             <span className="text-[#5ccfee]">{item.rating}</span>
           </div>
         )}
-        <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black to-transparent">
+        <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black to-transparent">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-[#5ccfee] font-medium truncate max-w-[70%]">
+            <span className="text-[10px] text-[#5ccfee] font-medium truncate max-w-[70%]">
               {item.genre}
             </span>
-            <span className="text-xs text-gray-300">{item.year}</span>
+            <span className="text-[10px] text-gray-300">{item.year}</span>
           </div>
         </div>
       </div>
-      <div className="p-2">
-        <h3 className="text-white text-sm font-medium line-clamp-1">
+      <div className="p-1.5">
+        <h3 className="text-white text-xs font-medium line-clamp-1">
           {item.title}
         </h3>
       </div>

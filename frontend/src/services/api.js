@@ -57,40 +57,56 @@ export const fetchShowDetails = async (id) => {
 /**
  * Fetch movies with filters
  * @param {Object} filters - Filter parameters
- * @returns {Promise<Object>} Filtered movie results
+ * @param {number} page - Page number
+ * @param {number} resultsPerPage - Number of results per page (max 50)
+ * @returns {Promise<Object>} Filtered movie results with pagination info
  */
-export const fetchMovies = async (filters = {}) => {
+export const fetchMovies = async (
+  filters = {},
+  page = 1,
+  resultsPerPage = 50
+) => {
   try {
     const queryParams = new URLSearchParams({
       api_key: API_KEY,
+      page: page,
       ...filters,
     }).toString()
 
     const response = await fetch(`${BASE_URL}/discover/movie?${queryParams}`)
-    return await response.json()
+    const data = await response.json()
+    return data
   } catch (error) {
     console.error('Error fetching movies:', error)
-    return { results: [] }
+    return { results: [], total_pages: 0, total_results: 0, page: page }
   }
 }
 
 /**
  * Fetch TV shows with filters
  * @param {Object} filters - Filter parameters
- * @returns {Promise<Object>} Filtered TV show results
+ * @param {number} page - Page number
+ * @param {number} resultsPerPage - Number of results per page (max 50)
+ * @returns {Promise<Object>} Filtered TV show results with pagination info
  */
-export const fetchShows = async (filters = {}) => {
+export const fetchShows = async (
+  filters = {},
+  page = 1,
+  resultsPerPage = 50
+) => {
   try {
     const queryParams = new URLSearchParams({
       api_key: API_KEY,
+      page: page,
       ...filters,
     }).toString()
 
     const response = await fetch(`${BASE_URL}/discover/tv?${queryParams}`)
-    return await response.json()
+    const data = await response.json()
+    return data
   } catch (error) {
     console.error('Error fetching shows:', error)
-    return { results: [] }
+    return { results: [], total_pages: 0, total_results: 0, page: page }
   }
 }
 
@@ -137,7 +153,7 @@ export const searchMedia = async (query, type = 'multi', page = 1) => {
  * Search TMDB API for movies, TV shows, and people
  * @param {string} query - Search term
  * @param {number} page - Page number
- * @returns {Promise<Array>} Formatted search results
+ * @returns {Promise<Object>} Formatted search results with pagination info
  */
 export const searchTMDB = async (query, page = 1) => {
   try {
@@ -147,10 +163,10 @@ export const searchTMDB = async (query, page = 1) => {
       )}&page=${page}`
     )
     const data = await response.json()
-    return data.results || []
+    return data
   } catch (error) {
     console.error('Error searching TMDB:', error)
-    return []
+    return { results: [], total_pages: 0, total_results: 0, page: page }
   }
 }
 
@@ -159,7 +175,7 @@ export const searchTMDB = async (query, page = 1) => {
  * @param {number} genreId - The genre ID to search for
  * @param {string} mediaType - 'movie' or 'tv'
  * @param {number} page - Page number
- * @returns {Promise<Array>} Content with the specified genre
+ * @returns {Promise<Object>} Content with the specified genre, with pagination info
  */
 export const searchByGenre = async (genreId, mediaType = 'movie', page = 1) => {
   try {
@@ -167,10 +183,10 @@ export const searchByGenre = async (genreId, mediaType = 'movie', page = 1) => {
       `${BASE_URL}/discover/${mediaType}?api_key=${API_KEY}&with_genres=${genreId}&page=${page}`
     )
     const data = await response.json()
-    return data.results || []
+    return data
   } catch (error) {
     console.error(`Error searching ${mediaType} by genre:`, error)
-    return []
+    return { results: [], total_pages: 0, total_results: 0, page: page }
   }
 }
 
