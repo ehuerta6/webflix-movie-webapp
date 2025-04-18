@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 function MovieCard({ movie }) {
   const { id, type = 'movie', title, poster, rating, genre, year } = movie
+  const [imageLoaded, setImageLoaded] = useState(false)
 
   // If there's no poster, don't render the card
   if (!poster) return null
@@ -12,7 +14,20 @@ function MovieCard({ movie }) {
       className="block bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200 cursor-pointer h-full"
     >
       <div className="aspect-[2/3] relative">
-        <img src={poster} alt={title} className="w-full h-full object-cover" />
+        {!imageLoaded && (
+          <div className="absolute inset-0 bg-[#333] flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
+        <img
+          src={poster}
+          alt={title}
+          className={`w-full h-full object-cover transition-opacity duration-300 ${
+            imageLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+          onLoad={() => setImageLoaded(true)}
+          loading="lazy"
+        />
         <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
           <span className="text-[#5ccfee]">{rating}</span>
         </div>

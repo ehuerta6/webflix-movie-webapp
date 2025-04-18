@@ -78,6 +78,8 @@ const getTrailerUrl = (videos) => {
 
 // Content Card component for reuse
 const ContentCard = ({ item, type }) => {
+  const [imageLoaded, setImageLoaded] = useState(false)
+
   // Skip rendering if no poster
   if (!item.poster) return null
 
@@ -87,10 +89,19 @@ const ContentCard = ({ item, type }) => {
       className="w-36 flex-shrink-0 bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200"
     >
       <div className="aspect-[2/3] relative">
+        {!imageLoaded && (
+          <div className="absolute inset-0 bg-[#333] flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
         <img
           src={item.poster}
           alt={item.title}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover transition-opacity duration-300 ${
+            imageLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+          onLoad={() => setImageLoaded(true)}
+          loading="lazy"
         />
         <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
           <span className="text-[#5ccfee]">{item.rating}</span>
@@ -115,16 +126,27 @@ const ContentCard = ({ item, type }) => {
 
 // Cast Card component for reuse
 const CastCard = ({ person }) => {
+  const [imageLoaded, setImageLoaded] = useState(false)
+
   // Skip rendering if no profile image
   if (!person.profile) return null
 
   return (
     <div className="w-32 flex-shrink-0 bg-[#1e1e1e] rounded overflow-hidden">
-      <div className="w-full h-40 overflow-hidden">
+      <div className="w-full h-40 overflow-hidden relative">
+        {!imageLoaded && (
+          <div className="absolute inset-0 bg-[#333] flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
         <img
           src={person.profile}
           alt={person.name}
-          className="w-full h-full object-cover object-center"
+          className={`w-full h-full object-cover object-center transition-opacity duration-300 ${
+            imageLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+          onLoad={() => setImageLoaded(true)}
+          loading="lazy"
         />
       </div>
       <div className="p-2">
@@ -145,6 +167,10 @@ function Details() {
   const [cast, setCast] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  // Image loading states
+  const [backdropLoaded, setBackdropLoaded] = useState(false)
+  const [posterLoaded, setPosterLoaded] = useState(false)
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -217,6 +243,18 @@ function Details() {
             }))
 
           setCast(formattedCast)
+
+          // Preload cast profile images
+          const profileUrls = formattedCast
+            .map((person) => person.profile)
+            .filter(Boolean)
+
+          if (profileUrls.length) {
+            // Start preloading in background
+            import('../services/api').then((api) => {
+              api.preloadImages(profileUrls).catch(() => {}) // Ignore preload errors
+            })
+          }
         }
 
         // Extract similar content
@@ -251,6 +289,16 @@ function Details() {
             }))
 
           setSimilarContent(similar)
+
+          // Preload similar content poster images
+          const posterUrls = similar.map((item) => item.poster).filter(Boolean)
+
+          if (posterUrls.length) {
+            // Start preloading in background
+            import('../services/api').then((api) => {
+              api.preloadImages(posterUrls).catch(() => {}) // Ignore preload errors
+            })
+          }
         }
       } catch (err) {
         console.error('Error fetching details:', err)
@@ -329,11 +377,22 @@ function Details() {
       <div className="relative">
         <div className="w-full h-[60vh] relative">
           {details.backdrop ? (
-            <img
-              src={details.backdrop}
-              alt={details.title}
-              className="w-full h-full object-cover"
-            />
+            <>
+              {!backdropLoaded && (
+                <div className="absolute inset-0 bg-[#1a1a1a] flex items-center justify-center">
+                  <div className="w-10 h-10 border-3 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+              <img
+                src={details.backdrop}
+                alt={details.title}
+                className={`w-full h-full object-cover transition-opacity duration-500 ${
+                  backdropLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+                onLoad={() => setBackdropLoaded(true)}
+                fetchPriority="high"
+              />
+            </>
           ) : (
             /* Gradient background as fallback */
             <div className="w-full h-full bg-gradient-to-b from-[#1a1a1a] to-[#121212]"></div>
@@ -351,11 +410,20 @@ function Details() {
         <div className="relative -mt-56 z-10 mx-auto max-w-screen-xl px-4">
           <div className="flex flex-col md:flex-row gap-6">
             {/* Poster */}
-            <div className="w-[200px] md:w-[300px] shrink-0 mx-auto md:mx-0">
+            <div className="w-[200px] md:w-[300px] shrink-0 mx-auto md:mx-0 relative">
+              {!posterLoaded && (
+                <div className="absolute inset-0 bg-[#333] flex items-center justify-center rounded-md">
+                  <div className="w-10 h-10 border-3 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
               <img
                 src={details.poster}
                 alt={details.title}
-                className="w-full aspect-[2/3] object-cover rounded-md shadow-lg"
+                className={`w-full aspect-[2/3] object-cover rounded-md shadow-lg transition-opacity duration-500 ${
+                  posterLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+                onLoad={() => setPosterLoaded(true)}
+                loading="eager"
               />
             </div>
 

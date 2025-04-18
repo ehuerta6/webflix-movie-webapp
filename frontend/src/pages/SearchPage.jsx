@@ -557,6 +557,18 @@ function SearchPage() {
               .slice(0, 5)
               .map((item) => formatMovieData(item))
 
+            // Preload backdrop images for smoother carousel
+            const backdropUrls = featuredItems
+              .map((item) => item.backdrop)
+              .filter(Boolean)
+
+            if (backdropUrls.length) {
+              // Start preloading in background
+              import('../services/api').then((api) => {
+                api.preloadImages(backdropUrls).catch(() => {}) // Ignore preload errors
+              })
+            }
+
             setFeaturedItems(featuredItems)
             setFeatured(featuredItems[0]) // Set the first item as initial featured
           }
@@ -582,6 +594,8 @@ function SearchPage() {
   const Featured = ({ movie }) => {
     // Don't render if movie data is invalid or missing backdrop
     if (!movie || !movie.backdrop) return null
+
+    const [backdropLoaded, setBackdropLoaded] = useState(false)
 
     // Function to go to the next item
     const goToNext = (e) => {
@@ -619,6 +633,13 @@ function SearchPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-[#121212]/80 via-transparent to-[#121212]/80 z-10"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#12121280] to-transparent z-10"></div>
 
+          {/* Loading state */}
+          {!backdropLoaded && (
+            <div className="absolute inset-0 bg-[#1a1a1a] flex items-center justify-center z-5">
+              <div className="w-10 h-10 border-3 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
+
           {/* Background image with animation */}
           <div
             className="w-full h-full"
@@ -631,14 +652,17 @@ function SearchPage() {
               key={movie.id} // Key helps React identify when to animate
               src={movie.backdrop}
               alt={movie.title}
-              className="w-full h-full object-cover transition-all duration-700 ease-out"
+              className={`w-full h-full object-cover transition-all duration-700 ease-out ${
+                backdropLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
               style={{
                 transform: 'scale(1.05)',
-                animation: 'fadeIn 800ms ease-in-out forwards',
+                animation: backdropLoaded
+                  ? 'fadeIn 800ms ease-in-out forwards'
+                  : 'none',
               }}
-              onError={(e) => {
-                e.target.onerror = null
-              }}
+              onLoad={() => setBackdropLoaded(true)}
+              fetchPriority="high"
             />
           </div>
 
@@ -1061,6 +1085,8 @@ function SearchPage() {
 }
 
 function ResultCard({ item }) {
+  const [imageLoaded, setImageLoaded] = useState(false)
+
   // Different card renderings based on media type
   if (item.type === 'person') {
     // Skip rendering if no profile path
@@ -1072,11 +1098,20 @@ function ResultCard({ item }) {
         className="bg-[#1e1e1e] rounded-md overflow-hidden hover:translate-y-[-2px] transition-transform duration-200"
       >
         <div className="flex h-full flex-col">
-          <div className="w-full h-24 overflow-hidden">
+          <div className="w-full h-24 overflow-hidden relative">
+            {!imageLoaded && (
+              <div className="absolute inset-0 bg-[#333] flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
             <img
               src={`https://image.tmdb.org/t/p/w185${item.posterPath}`}
               alt={item.title}
-              className="w-full h-full object-cover object-top"
+              className={`w-full h-full object-cover object-top transition-opacity duration-300 ${
+                imageLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+              onLoad={() => setImageLoaded(true)}
+              loading="lazy"
             />
           </div>
           <div className="p-1.5 flex-1">
@@ -1099,16 +1134,27 @@ function ResultCard({ item }) {
   // Skip rendering if no poster path
   if (!item.posterPath) return null
 
+  const [movieImageLoaded, setMovieImageLoaded] = useState(false)
+
   return (
     <Link
       to={`/${item.type}/${item.id}`}
       className="bg-[#1e1e1e] rounded-md overflow-hidden hover:translate-y-[-2px] transition-transform duration-200"
     >
       <div className="aspect-[2/3] relative">
+        {!movieImageLoaded && (
+          <div className="absolute inset-0 bg-[#333] flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
         <img
           src={`https://image.tmdb.org/t/p/w185${item.posterPath}`}
           alt={item.title}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover transition-opacity duration-300 ${
+            movieImageLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+          onLoad={() => setMovieImageLoaded(true)}
+          loading="lazy"
         />
         {item.rating && (
           <div className="absolute top-0 right-0 bg-black/60 px-1 py-0.5 m-0.5 rounded text-[10px]">

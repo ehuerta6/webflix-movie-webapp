@@ -153,6 +153,18 @@ function Home() {
               .slice(0, 5)
               .map((item) => formatMovieData(item))
 
+            // Preload backdrop images for smoother carousel
+            const backdropUrls = featuredItems
+              .map((item) => item.backdrop)
+              .filter(Boolean)
+
+            if (backdropUrls.length) {
+              // Start preloading in background
+              import('../services/api').then((api) => {
+                api.preloadImages(backdropUrls).catch(() => {}) // Ignore preload errors
+              })
+            }
+
             setFeaturedItems(featuredItems)
             setFeatured(featuredItems[0]) // Set the first item as initial featured
 
@@ -230,6 +242,8 @@ function Home() {
   const Featured = ({ movie }) => {
     if (!movie || !movie.backdrop) return null
 
+    const [backdropLoaded, setBackdropLoaded] = useState(false)
+
     // Function to go to the next item
     const goToNext = (e) => {
       e.preventDefault()
@@ -265,6 +279,13 @@ function Home() {
           <div className="absolute inset-0 bg-gradient-to-r from-[#121212]/80 via-transparent to-[#121212]/80 z-10"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#12121280] to-transparent z-10"></div>
 
+          {/* Loading state */}
+          {!backdropLoaded && (
+            <div className="absolute inset-0 bg-[#1a1a1a] flex items-center justify-center z-5">
+              <div className="w-10 h-10 border-3 border-[#5ccfee] border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
+
           {/* Background image with animation */}
           <div
             className="w-full h-full"
@@ -277,11 +298,17 @@ function Home() {
               key={movie.id} // Key helps React identify when to animate
               src={movie.backdrop}
               alt={movie.title}
-              className="w-full h-full object-cover transition-all duration-700 ease-out"
+              className={`w-full h-full object-cover transition-all duration-700 ease-out ${
+                backdropLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
               style={{
                 transform: 'scale(1.05)',
-                animation: 'fadeIn 800ms ease-in-out forwards',
+                animation: backdropLoaded
+                  ? 'fadeIn 800ms ease-in-out forwards'
+                  : 'none',
               }}
+              onLoad={() => setBackdropLoaded(true)}
+              fetchPriority="high"
             />
           </div>
 

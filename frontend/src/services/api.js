@@ -206,3 +206,50 @@ export const fetchPersonDetails = async (id) => {
     return null
   }
 }
+
+/**
+ * Helper function to preload images
+ * @param {string} src - The image URL to preload
+ * @returns {Promise} - Promise that resolves when the image is loaded or rejects on error
+ */
+export const preloadImage = (src) => {
+  return new Promise((resolve, reject) => {
+    if (!src) {
+      reject(new Error('No image source provided'))
+      return
+    }
+
+    const img = new Image()
+    img.onload = () => resolve(src)
+    img.onerror = () => reject(new Error(`Failed to load image: ${src}`))
+    img.src = src
+  })
+}
+
+/**
+ * Preload multiple images
+ * @param {Array<string>} sources - Array of image URLs to preload
+ * @returns {Promise} - Promise that resolves when all images are loaded, with an array of results
+ */
+export const preloadImages = (sources = []) => {
+  if (!sources.length) return Promise.resolve([])
+
+  // Create an array of promises from the sources
+  const promises = sources
+    .filter((src) => src) // Filter out null/undefined sources
+    .map((src) => preloadImage(src).catch(() => null)) // Handle individual failures
+
+  // Return a promise that resolves when all promises are settled
+  return Promise.allSettled(promises)
+}
+
+/**
+ * Helper function to generate proper TMDB image URLs
+ * @param {string} path - The image path from TMDB
+ * @param {string} size - The size of the image (w500, original, etc.)
+ * @returns {string|null} - Full image URL or null if path is invalid
+ */
+export const getTMDBImageUrl = (path, size = 'w500') => {
+  if (!path) return null
+  return `https://image.tmdb.org/t/p/${size}${path}`
+}
