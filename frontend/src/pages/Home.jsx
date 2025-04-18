@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import placeholderImg from '../assets/profile-pic.jpg'
+import placeholderImg from '../assets/movie-placeholder.png'
 import MovieCard from '../components/MovieCard'
 import { fetchTrending, fetchMovies, fetchShows } from '../services/api'
 

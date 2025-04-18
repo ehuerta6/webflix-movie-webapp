@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import profilePic from '../assets/profile-pic.jpg'
+import moviePlaceholder from '../assets/movie-placeholder.png'
 import { fetchMovies, fetchGenres, fetchTrending } from '../services/api'
 
 // Helper function to validate movie data
@@ -21,7 +22,7 @@ const formatMovieData = (movie, genreMap = {}) => {
     title: movie.title || movie.name,
     poster: movie.poster_path
       ? `https://image.tmdb.org/t/p/w342${movie.poster_path}`
-      : profilePic,
+      : moviePlaceholder,
     year:
       movie.release_date || movie.first_air_date
         ? new Date(movie.release_date || movie.first_air_date).getFullYear()
@@ -43,7 +44,7 @@ const MovieCard = ({ movie, actions }) => (
         alt={movie.title}
         className="w-full h-full object-cover"
         onError={(e) => {
-          e.target.src = profilePic
+          e.target.src = moviePlaceholder
         }}
       />
       <div className="absolute top-1 right-1 bg-black bg-opacity-70 text-yellow-400 text-xs font-bold px-1.5 py-0.5 rounded">
@@ -151,21 +152,21 @@ function User() {
       {
         id: 1,
         title: 'Inception',
-        poster: profilePic,
+        poster: moviePlaceholder,
         year: 2010,
         rating: 8.8,
       },
       {
         id: 2,
         title: 'The Shawshank Redemption',
-        poster: profilePic,
+        poster: moviePlaceholder,
         year: 1994,
         rating: 9.3,
       },
       {
         id: 3,
         title: 'The Dark Knight',
-        poster: profilePic,
+        poster: moviePlaceholder,
         year: 2008,
         rating: 9.0,
       },
@@ -174,21 +175,21 @@ function User() {
       {
         id: 4,
         title: 'Pulp Fiction',
-        poster: profilePic,
+        poster: moviePlaceholder,
         year: 1994,
         rating: 8.9,
       },
       {
         id: 5,
         title: 'The Godfather',
-        poster: profilePic,
+        poster: moviePlaceholder,
         year: 1972,
         rating: 9.2,
       },
       {
         id: 6,
         title: 'Interstellar',
-        poster: profilePic,
+        poster: moviePlaceholder,
         year: 2014,
         rating: 8.6,
       },
@@ -197,7 +198,7 @@ function User() {
       {
         id: 7,
         title: 'Blade Runner 2049',
-        poster: profilePic,
+        poster: moviePlaceholder,
         year: 2017,
         rating: 8.0,
         genre: 'Sci-Fi',
@@ -205,7 +206,7 @@ function User() {
       {
         id: 8,
         title: 'The Departed',
-        poster: profilePic,
+        poster: moviePlaceholder,
         year: 2006,
         rating: 8.5,
         genre: 'Drama',
@@ -213,7 +214,7 @@ function User() {
       {
         id: 9,
         title: 'John Wick',
-        poster: profilePic,
+        poster: moviePlaceholder,
         year: 2014,
         rating: 7.4,
         genre: 'Action',

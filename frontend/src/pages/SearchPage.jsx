@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import placeholderImg from '../assets/profile-pic.jpg'
+import placeholderImg from '../assets/movie-placeholder.png'
 import {
   searchTMDB,
   fetchGenres,
@@ -153,18 +153,29 @@ function SearchPage() {
     const hasTitle = item.title || item.name
 
     // Different validations based on media type
-    if (item.media_type === 'movie') {
+    if (item.media_type === 'movie' || (hasTitle && item.title)) {
       // For movies: need at least title and either poster or overview
       return hasIdentifier && hasTitle && (item.poster_path || item.overview)
-    } else if (item.media_type === 'tv') {
-      // For TV shows: need at least title and either poster or overview
-      return hasIdentifier && hasTitle && (item.poster_path || item.overview)
+    } else if (
+      item.media_type === 'tv' ||
+      (hasTitle && item.name && !item.title)
+    ) {
+      // For TV shows: strict validation - require poster, title and overview
+      return (
+        hasIdentifier &&
+        hasTitle &&
+        item.poster_path &&
+        item.overview &&
+        item.overview.trim() !== '' &&
+        ((item.first_air_date && item.first_air_date.trim() !== '') ||
+          (item.release_date && item.release_date.trim() !== ''))
+      )
     } else if (item.media_type === 'person') {
       // For people: need at least name and profile path
       return hasIdentifier && hasTitle && item.profile_path
     }
 
-    // If media_type is not specified, use generic validation
+    // If media_type is not specified and can't determine the type, use generic validation
     return (
       hasIdentifier &&
       hasTitle &&
@@ -216,10 +227,12 @@ function SearchPage() {
       if (!searchQuery) {
         setLoadingPopular(true)
         try {
-          // Fetch popular movies
-          const response = await fetchTrending(
-            'movie',
-            'day',
+          // Fetch popular movies from API
+          const response = await fetchMovies(
+            {
+              sort_by: 'popularity.desc',
+              include_adult: false,
+            },
             currentPage,
             ITEMS_PER_PAGE
           )
@@ -537,24 +550,9 @@ function SearchPage() {
         const trendingData = await fetchTrending('all', 'day')
 
         if (trendingData.results && trendingData.results.length > 0) {
-          // Filter valid content first
-          const validTrendingResults = trendingData.results.filter(
-            (item) =>
-              // Check for valid title/name
-              (item.title || item.name) &&
-              // Check for valid poster and backdrop
-              item.poster_path &&
-              item.backdrop_path &&
-              // Check for non-empty overview
-              item.overview &&
-              item.overview.trim() !== '' &&
-              // Check for defined release date
-              ((item.release_date && item.release_date.trim() !== '') ||
-                (item.first_air_date && item.first_air_date.trim() !== '')) &&
-              // Check for valid rating
-              typeof item.vote_average === 'number' &&
-              item.vote_average > 0
-          )
+          // Filter valid content using the isValidContent function
+          const validTrendingResults =
+            trendingData.results.filter(isValidContent)
 
           if (validTrendingResults.length > 0) {
             // Use the first 5 valid trending items as featured content
@@ -1022,25 +1020,11 @@ function SearchPage() {
             </h2>
 
             {/* Loading State for Popular Movies */}
-            {loadingPopular && currentPage === 1 && (
+            {loadingPopular && (
               <div className="flex justify-center items-center py-10">
                 <div className="flex flex-col items-center">
                   <div className="w-8 h-8 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin mb-3"></div>
                   <p className="text-gray-400">Loading popular movies...</p>
-                </div>
-              </div>
-            )}
-
-            {/* Loading overlay for page changes */}
-            {loadingPopular && currentPage > 1 && (
-              <div className="relative mb-4">
-                <div className="absolute inset-0 bg-[#121212]/70 backdrop-blur-sm flex justify-center items-center z-10 rounded-lg">
-                  <div className="flex items-center">
-                    <div className="w-5 h-5 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin mr-2"></div>
-                    <p className="text-gray-400 text-sm">
-                      Loading page {currentPage}...
-                    </p>
-                  </div>
                 </div>
               </div>
             )}

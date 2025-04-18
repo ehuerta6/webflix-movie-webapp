@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import placeholderImg from '../assets/profile-pic.jpg'
+import placeholderImg from '../assets/movie-placeholder.png'
 import { fetchMovieDetails, fetchShowDetails } from '../services/api'
 
 // Helper function with simplified content validation

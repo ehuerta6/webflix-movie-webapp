@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import placeholderImg from '../assets/profile-pic.jpg'
+import placeholderImg from '../assets/movie-placeholder.png'
 
 function MovieCard({ movie }) {
   const { id, type = 'movie', title, poster, rating, genre, year } = movie
