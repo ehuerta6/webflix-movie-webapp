@@ -155,6 +155,26 @@ export const searchTMDB = async (query, page = 1) => {
 }
 
 /**
+ * Search for content by genre ID
+ * @param {number} genreId - The genre ID to search for
+ * @param {string} mediaType - 'movie' or 'tv'
+ * @param {number} page - Page number
+ * @returns {Promise<Array>} Content with the specified genre
+ */
+export const searchByGenre = async (genreId, mediaType = 'movie', page = 1) => {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/discover/${mediaType}?api_key=${API_KEY}&with_genres=${genreId}&page=${page}`
+    )
+    const data = await response.json()
+    return data.results || []
+  } catch (error) {
+    console.error(`Error searching ${mediaType} by genre:`, error)
+    return []
+  }
+}
+
+/**
  * Fetch person details by ID
  * @param {number} id - Person ID
  * @returns {Promise<Object>} Person details
