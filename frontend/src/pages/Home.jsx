@@ -1,18 +1,42 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import placeholderImg from '../assets/profile-pic.jpg'
 import MovieCard from '../components/MovieCard'
 import { fetchTrending, fetchMovies, fetchShows } from '../services/api'
 
+// Helper function to validate if a movie/show has all required fields
+const isValidContent = (item) => {
+  if (!item) return false
+
+  return (
+    // Check for valid title/name
+    (item.title || item.name) &&
+    // Check for valid poster
+    item.poster_path &&
+    // Check for non-empty overview
+    item.overview &&
+    item.overview.trim() !== '' &&
+    // Check for defined release date
+    ((item.release_date && item.release_date.trim() !== '') ||
+      (item.first_air_date && item.first_air_date.trim() !== '')) &&
+    // Check for valid rating (must exist and be > 0)
+    typeof item.vote_average === 'number' &&
+    item.vote_average > 0
+  )
+}
+
 function Home() {
   // State for different movie/show categories
   const [featured, setFeatured] = useState(null)
+  const [featuredItems, setFeaturedItems] = useState([])
+  const [currentFeaturedIndex, setCurrentFeaturedIndex] = useState(0)
   const [inTheaters, setInTheaters] = useState([])
   const [popular, setPopular] = useState([])
   const [topRatedMovies, setTopRatedMovies] = useState([])
   const [topRatedShows, setTopRatedShows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const carouselTimerRef = useRef(null)
 
   // Format movie data to be consistent with MovieCard component
   const formatMovieData = (movie) => ({
@@ -78,6 +102,36 @@ function Home() {
       : []
   }
 
+  // Function to rotate featured items
+  const rotateFeatured = useCallback(() => {
+    setCurrentFeaturedIndex((prevIndex) =>
+      prevIndex === featuredItems.length - 1 ? 0 : prevIndex + 1
+    )
+  }, [featuredItems.length])
+
+  // Set up automatic rotation
+  useEffect(() => {
+    if (featuredItems.length > 1) {
+      carouselTimerRef.current = setInterval(rotateFeatured, 8000) // Rotate every 8 seconds
+
+      return () => {
+        if (carouselTimerRef.current) {
+          clearInterval(carouselTimerRef.current)
+        }
+      }
+    }
+  }, [featuredItems.length, rotateFeatured])
+
+  // Function to manually change featured item
+  const changeFeaturedItem = (index) => {
+    // Reset the timer when manually changed
+    if (carouselTimerRef.current) {
+      clearInterval(carouselTimerRef.current)
+      carouselTimerRef.current = setInterval(rotateFeatured, 8000)
+    }
+    setCurrentFeaturedIndex(index)
+  }
+
   // Fetch data from API
   useEffect(() => {
     const fetchHomeData = async () => {
@@ -89,34 +143,30 @@ function Home() {
         const trendingData = await fetchTrending('all', 'day')
 
         if (trendingData.results && trendingData.results.length > 0) {
-          // Use the first trending item as featured content
-          const featuredItem = trendingData.results[0]
-          setFeatured(formatMovieData(featuredItem))
+          // Filter valid content first
+          const validTrendingResults =
+            trendingData.results.filter(isValidContent)
 
-          // Use other trending items for the "What's Popular" section
-          const formattedPopular = trendingData.results
-            .slice(1, 7)
-            .map((item) => formatMovieData(item))
-          setPopular(formattedPopular)
+          if (validTrendingResults.length > 0) {
+            // Use the first 5 valid trending items as featured content
+            const featuredItems = validTrendingResults
+              .slice(0, 5)
+              .map((item) => formatMovieData(item))
+
+            setFeaturedItems(featuredItems)
+            setFeatured(featuredItems[0]) // Set the first item as initial featured
+
+            // Use other valid trending items for the "What's Popular" section
+            const formattedPopular = validTrendingResults
+              .slice(5, 20) // Get more for horizontal scrolling
+              .map((item) => formatMovieData(item))
+              .slice(0, 12) // Take up to 12 valid items
+            setPopular(formattedPopular)
+          }
         }
 
-        // Fetch in theaters (recent & upcoming movies)
-        const theatersData = await fetchMovies({
-          sort_by: 'primary_release_date.desc',
-          'primary_release_date.lte': new Date().toISOString().split('T')[0],
-          'primary_release_date.gte': new Date(
-            Date.now() - 30 * 24 * 60 * 60 * 1000
-          )
-            .toISOString()
-            .split('T')[0],
-        })
-
-        if (theatersData.results) {
-          const formattedTheaters = theatersData.results
-            .slice(0, 6)
-            .map((movie) => formatMovieData({ ...movie, media_type: 'movie' }))
-          setInTheaters(formattedTheaters)
-        }
+        // We're removing the "In Theaters" section as requested
+        setInTheaters([])
 
         // Fetch top rated movies
         const topMoviesData = await fetchMovies({
@@ -125,9 +175,13 @@ function Home() {
         })
 
         if (topMoviesData.results) {
-          const formattedTopMovies = topMoviesData.results
-            .slice(0, 6)
+          // Filter valid content
+          const validTopMovies = topMoviesData.results.filter(isValidContent)
+
+          const formattedTopMovies = validTopMovies
+            .slice(0, 20) // Get more for horizontal scrolling
             .map((movie) => formatMovieData({ ...movie, media_type: 'movie' }))
+            .slice(0, 12) // Take up to 12 valid items
           setTopRatedMovies(formattedTopMovies)
         }
 
@@ -138,9 +192,13 @@ function Home() {
         })
 
         if (topShowsData.results) {
-          const formattedTopShows = topShowsData.results
-            .slice(0, 6)
+          // Filter valid content
+          const validTopShows = topShowsData.results.filter(isValidContent)
+
+          const formattedTopShows = validTopShows
+            .slice(0, 20) // Get more for horizontal scrolling
             .map((show) => formatMovieData({ ...show, media_type: 'tv' }))
+            .slice(0, 12) // Take up to 12 valid items
           setTopRatedShows(formattedTopShows)
         }
 
@@ -155,59 +213,229 @@ function Home() {
     fetchHomeData()
   }, [])
 
-  // Featured component for the main highlight
-  const Featured = ({ movie }) => (
-    <section className="relative mb-10">
-      <div className="w-full h-[400px] md:h-[450px] relative">
-        {/* Gradient overlay for better text visibility */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#121212] to-transparent z-10"></div>
+  // Update featured item when currentFeaturedIndex changes
+  useEffect(() => {
+    if (featuredItems.length > 0) {
+      setFeatured(featuredItems[currentFeaturedIndex])
+    }
+  }, [currentFeaturedIndex, featuredItems])
 
-        {/* Background image */}
-        <img
-          src={movie.backdrop ? movie.backdrop : placeholderImg}
-          alt={movie.title}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            e.target.onerror = null
-            e.target.src = placeholderImg
-          }}
-        />
+  // Define CSS animation style for the carousel
+  const carouselAnimation = {
+    opacity: 1,
+    transition: 'opacity 600ms ease-in-out, transform 800ms ease-in-out',
+  }
 
-        {/* Content overlay */}
-        <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-8 z-20">
-          <div className="max-w-4xl mx-auto w-full">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="rating-badge">{movie.rating}</span>
-              <span className="text-gray-400 text-sm">{movie.year}</span>
-              <span className="text-gray-400 text-sm hidden sm:inline">
-                • {movie.genres && movie.genres.join(', ')}
-              </span>
-            </div>
+  // Featured component for the main highlight with carousel
+  const Featured = ({ movie }) => {
+    if (!movie) return null
 
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-medium text-white mb-2">
-              {movie.title}
-            </h1>
+    // Function to go to the next item
+    const goToNext = (e) => {
+      e.preventDefault()
+      setCurrentFeaturedIndex((prevIndex) =>
+        prevIndex === featuredItems.length - 1 ? 0 : prevIndex + 1
+      )
 
-            <p className="text-gray-300 text-sm md:text-base leading-relaxed max-w-2xl mb-4 line-clamp-3 md:line-clamp-none">
-              {movie.description}
-            </p>
+      // Reset timer
+      if (carouselTimerRef.current) {
+        clearInterval(carouselTimerRef.current)
+        carouselTimerRef.current = setInterval(rotateFeatured, 8000)
+      }
+    }
 
-            <div className="flex gap-3 mt-3">
-              <Link
-                to={`/${movie.type}/${movie.id}`}
-                className="primary-button flex items-center gap-1 cursor-pointer"
+    // Function to go to the previous item
+    const goToPrev = (e) => {
+      e.preventDefault()
+      setCurrentFeaturedIndex((prevIndex) =>
+        prevIndex === 0 ? featuredItems.length - 1 : prevIndex - 1
+      )
+
+      // Reset timer
+      if (carouselTimerRef.current) {
+        clearInterval(carouselTimerRef.current)
+        carouselTimerRef.current = setInterval(rotateFeatured, 8000)
+      }
+    }
+
+    return (
+      <section className="relative mb-10">
+        <div className="w-full h-[400px] md:h-[550px] lg:h-[600px] relative overflow-hidden">
+          {/* Gradient overlay for better text visibility */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#121212]/80 via-transparent to-[#121212]/80 z-10"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#12121280] to-transparent z-10"></div>
+
+          {/* Background image with animation */}
+          <div
+            className="w-full h-full"
+            style={{
+              ...carouselAnimation,
+              position: 'relative',
+            }}
+          >
+            <img
+              key={movie.id} // Key helps React identify when to animate
+              src={movie.backdrop ? movie.backdrop : placeholderImg}
+              alt={movie.title}
+              className="w-full h-full object-cover transition-all duration-700 ease-out"
+              style={{
+                transform: 'scale(1.05)',
+                animation: 'fadeIn 800ms ease-in-out forwards',
+              }}
+              onError={(e) => {
+                e.target.onerror = null
+                e.target.src = placeholderImg
+              }}
+            />
+          </div>
+
+          {/* Content overlay with animation */}
+          <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-8 z-20">
+            <div className="max-w-4xl mx-auto w-full" style={carouselAnimation}>
+              <div className="flex items-center gap-2 mb-1 opacity-90">
+                <span className="rating-badge">{movie.rating}</span>
+                <span className="text-gray-300 text-sm">{movie.year}</span>
+                <span className="text-gray-300 text-sm hidden sm:inline">
+                  • {movie.genres && movie.genres.join(', ')}
+                </span>
+              </div>
+
+              <h1
+                className="text-2xl md:text-3xl lg:text-4xl font-medium text-white mb-2"
+                key={`title-${movie.id}`}
+                style={{
+                  animation: 'slideUp 600ms ease-out forwards',
+                  textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                }}
               >
-                <span>▶</span> Watch
-              </Link>
-              <button className="secondary-button cursor-pointer">
-                Add to List
-              </button>
+                {movie.title}
+              </h1>
+
+              <p
+                className="text-gray-300 text-sm md:text-base leading-relaxed max-w-2xl mb-4 line-clamp-3 md:line-clamp-none"
+                key={`desc-${movie.id}`}
+                style={{
+                  animation: 'slideUp 700ms ease-out forwards',
+                  animationDelay: '100ms',
+                  opacity: 0,
+                }}
+              >
+                {movie.description}
+              </p>
+
+              <div
+                className="flex gap-3 mt-4"
+                key={`buttons-${movie.id}`}
+                style={{
+                  animation: 'slideUp 800ms ease-out forwards',
+                  animationDelay: '200ms',
+                  opacity: 0,
+                }}
+              >
+                <Link
+                  to={`/${movie.type}/${movie.id}`}
+                  className="primary-button flex items-center gap-1 cursor-pointer group"
+                >
+                  <span className="transform transition-transform group-hover:scale-110">
+                    ▶
+                  </span>{' '}
+                  Watch
+                </Link>
+                <button className="secondary-button cursor-pointer flex items-center gap-1 hover:bg-[#5ccfee20]">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  Add to List
+                </button>
+              </div>
+
+              {/* Carousel indicators */}
+              {featuredItems.length > 1 && (
+                <div
+                  className="flex mt-6 gap-2"
+                  style={{
+                    animation: 'fadeIn 1s ease-out forwards',
+                    animationDelay: '300ms',
+                    opacity: 0,
+                  }}
+                >
+                  {featuredItems.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => changeFeaturedItem(index)}
+                      className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                        index === currentFeaturedIndex
+                          ? 'bg-[#5ccfee] w-5'
+                          : 'bg-gray-600 hover:bg-gray-500'
+                      }`}
+                      aria-label={`View featured item ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Navigation arrows */}
+          {featuredItems.length > 1 && (
+            <>
+              <button
+                onClick={goToPrev}
+                className="absolute left-2 md:left-6 top-1/2 transform -translate-y-1/2 z-30 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full focus:outline-none transition-all duration-200 hover:scale-110"
+                aria-label="Previous featured item"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={goToNext}
+                className="absolute right-2 md:right-6 top-1/2 transform -translate-y-1/2 z-30 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full focus:outline-none transition-all duration-200 hover:scale-110"
+                aria-label="Next featured item"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </>
+          )}
         </div>
-      </div>
-    </section>
-  )
+      </section>
+    )
+  }
 
   // Section component for code reuse
   const Section = ({ title, items }) => (
@@ -215,10 +443,12 @@ function Home() {
       <h2 className="text-lg md:text-xl font-medium text-white mb-4 px-4 md:px-6">
         {title}
       </h2>
-      <div className="px-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="overflow-x-auto pb-4 -mx-4 px-4">
+        <div className="flex space-x-4" style={{ minWidth: 'max-content' }}>
           {items.map((item) => (
-            <MovieCard key={item.id} movie={item} />
+            <div key={item.id} className="w-36 md:w-40 flex-shrink-0">
+              <MovieCard movie={item} />
+            </div>
           ))}
         </div>
       </div>
@@ -257,11 +487,16 @@ function Home() {
       <div className="w-full mx-auto">
         {featured && <Featured movie={featured} />}
 
-        <div className="max-w-screen-xl mx-auto">
-          <Section title="In Theaters" items={inTheaters} />
-          <Section title="What's Popular" items={popular} />
-          <Section title="Top Rated Movies" items={topRatedMovies} />
-          <Section title="Top Rated Shows" items={topRatedShows} />
+        <div className="max-w-screen-2xl mx-auto">
+          {popular.length > 0 && (
+            <Section title="What's Popular" items={popular} />
+          )}
+          {topRatedMovies.length > 0 && (
+            <Section title="Top Rated Movies" items={topRatedMovies} />
+          )}
+          {topRatedShows.length > 0 && (
+            <Section title="Top Rated TV Shows" items={topRatedShows} />
+          )}
         </div>
       </div>
     </div>

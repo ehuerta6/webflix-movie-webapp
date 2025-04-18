@@ -7,7 +7,7 @@ function MovieCard({ movie }) {
   return (
     <Link
       to={`/${type}/${id}`}
-      className="bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200 cursor-pointer"
+      className="block bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200 cursor-pointer h-full"
     >
       <div className="aspect-[2/3] relative">
         <img
