@@ -97,17 +97,18 @@ export const fetchShows = async (filters = {}) => {
 /**
  * Fetch movie and TV genres
  * @param {string} type - 'movie' or 'tv'
- * @returns {Promise<Object>} Genres list
+ * @returns {Promise<Array>} Genres list
  */
 export const fetchGenres = async (type = 'movie') => {
   try {
     const response = await fetch(
       `${BASE_URL}/genre/${type}/list?api_key=${API_KEY}`
     )
-    return await response.json()
+    const data = await response.json()
+    return data.genres || []
   } catch (error) {
     console.error('Error fetching genres:', error)
-    return { genres: [] }
+    return []
   }
 }
 
@@ -129,5 +130,43 @@ export const searchMedia = async (query, type = 'multi', page = 1) => {
   } catch (error) {
     console.error('Error searching media:', error)
     return { results: [] }
+  }
+}
+
+/**
+ * Search TMDB API for movies, TV shows, and people
+ * @param {string} query - Search term
+ * @param {number} page - Page number
+ * @returns {Promise<Array>} Formatted search results
+ */
+export const searchTMDB = async (query, page = 1) => {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(
+        query
+      )}&page=${page}`
+    )
+    const data = await response.json()
+    return data.results || []
+  } catch (error) {
+    console.error('Error searching TMDB:', error)
+    return []
+  }
+}
+
+/**
+ * Fetch person details by ID
+ * @param {number} id - Person ID
+ * @returns {Promise<Object>} Person details
+ */
+export const fetchPersonDetails = async (id) => {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/person/${id}?api_key=${API_KEY}&append_to_response=combined_credits`
+    )
+    return await response.json()
+  } catch (error) {
+    console.error('Error fetching person details:', error)
+    return null
   }
 }

@@ -1,122 +1,107 @@
 import { useState, useEffect } from 'react'
 import MovieCard from '../components/MovieCard'
-import placeholderImg from '../assets/profile-pic.jpg'
+import { fetchMovies, fetchGenres } from '../services/api'
 
 function Movies() {
   const [movies, setMovies] = useState([])
   const [filteredMovies, setFilteredMovies] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   // Filter states
   const [selectedGenre, setSelectedGenre] = useState('All')
   const [sortBy, setSortBy] = useState('Default')
-
-  // Available genres
-  const genres = [
-    'All',
-    'Action',
-    'Drama',
-    'Comedy',
-    'Sci-Fi',
-    'Horror',
-    'Romance',
-    'Thriller',
-    'Fantasy',
-  ]
+  const [genres, setGenres] = useState([{ id: 0, name: 'All' }])
 
   // Sort options
   const sortOptions = ['Default', 'Top Rated', 'Newest', 'Most Popular']
 
+  // Fetch movie genres when component mounts
   useEffect(() => {
-    // Simulate fetching data
-    setTimeout(() => {
-      const movieData = generateMovieData(24)
-      setMovies(movieData)
-      setFilteredMovies(movieData)
-      setLoading(false)
-    }, 1000)
+    const loadGenres = async () => {
+      try {
+        const genreData = await fetchGenres('movie')
+        if (genreData.genres && genreData.genres.length > 0) {
+          setGenres([{ id: 0, name: 'All' }, ...genreData.genres])
+        }
+      } catch (err) {
+        console.error('Error fetching genres:', err)
+        setError('Failed to load genres. Please try again later.')
+      }
+    }
+
+    loadGenres()
   }, [])
 
-  // Apply filters whenever filter criteria change
+  // Fetch movies when component mounts
   useEffect(() => {
-    if (movies.length === 0) return
+    const loadMovies = async () => {
+      setLoading(true)
+      setError(null)
 
-    let result = [...movies]
+      try {
+        // Create filter parameters for API call
+        let params = {}
 
-    // Filter by genre
-    if (selectedGenre !== 'All') {
-      result = result.filter((movie) => movie.genre === selectedGenre)
+        // Add sorting parameters
+        switch (sortBy) {
+          case 'Top Rated':
+            params.sort_by = 'vote_average.desc'
+            break
+          case 'Newest':
+            params.sort_by = 'primary_release_date.desc'
+            break
+          case 'Most Popular':
+            params.sort_by = 'popularity.desc'
+            break
+          default:
+            params.sort_by = 'popularity.desc' // Default sort
+        }
+
+        // Add genre filter if not "All"
+        if (selectedGenre !== 'All' && selectedGenre !== 0) {
+          const genreId = genres.find((g) => g.name === selectedGenre)?.id
+          if (genreId) params.with_genres = genreId
+        }
+
+        const data = await fetchMovies(params)
+
+        if (data.results) {
+          // Transform the data format to match what our components expect
+          const formattedMovies = data.results.map((movie) => ({
+            id: movie.id,
+            type: 'movie',
+            title: movie.title,
+            poster: movie.poster_path
+              ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+              : null,
+            rating: movie.vote_average.toFixed(1),
+            genre:
+              movie.genre_ids && movie.genre_ids.length > 0
+                ? genres.find((g) => g.id === movie.genre_ids[0])?.name ||
+                  'Unknown'
+                : 'Unknown',
+            year: movie.release_date
+              ? movie.release_date.substring(0, 4)
+              : 'Unknown',
+            popularity: movie.popularity,
+          }))
+
+          setMovies(formattedMovies)
+          setFilteredMovies(formattedMovies)
+        } else {
+          setError('No movies found. Please try again later.')
+        }
+      } catch (err) {
+        console.error('Error fetching movies:', err)
+        setError('Failed to load movies. Please try again later.')
+      } finally {
+        setLoading(false)
+      }
     }
 
-    // Apply sorting
-    switch (sortBy) {
-      case 'Top Rated':
-        result = [...result].sort(
-          (a, b) => parseFloat(b.rating) - parseFloat(a.rating)
-        )
-        break
-      case 'Newest':
-        result = [...result].sort((a, b) => parseInt(b.year) - parseInt(a.year))
-        break
-      case 'Most Popular':
-        // Simulating popularity with a random factor for demo purposes
-        result = [...result].sort((a, b) => b.popularity - a.popularity)
-        break
-      default:
-        // Default sort - keep original order
-        break
-    }
-
-    setFilteredMovies(result)
-  }, [selectedGenre, sortBy, movies])
-
-  // Generate mock movie data
-  const generateMovieData = (count) => {
-    const genres = [
-      'Action',
-      'Drama',
-      'Comedy',
-      'Sci-Fi',
-      'Horror',
-      'Romance',
-      'Thriller',
-      'Fantasy',
-    ]
-    const years = ['2023', '2022', '2021', '2020', '2024']
-    const movieTitles = [
-      'The Last Journey',
-      'Eternal Sunshine',
-      'Dark Knight',
-      'Lost in Space',
-      'The Great Adventure',
-      'Red Horizon',
-      'Whispers in the Dark',
-      'Frozen Heart',
-      'Lightning Strike',
-      'Silent Echo',
-      'Through the Fire',
-      'Midnight Hour',
-      'Brave New World',
-      'Golden Age',
-      'Beyond the Stars',
-      'The Secret Door',
-    ]
-
-    return Array.from({ length: count }, (_, i) => ({
-      id: `movie-${i}`,
-      type: 'movie',
-      title:
-        movieTitles[i % movieTitles.length] +
-        (i > movieTitles.length
-          ? ` ${Math.floor(i / movieTitles.length) + 1}`
-          : ''),
-      poster: null,
-      rating: (Math.random() * 5 + 5).toFixed(1),
-      genre: genres[Math.floor(Math.random() * genres.length)],
-      year: years[Math.floor(Math.random() * years.length)],
-      popularity: Math.random() * 10, // Random popularity score for sorting
-    }))
-  }
+    loadMovies()
+  }, [sortBy, selectedGenre, genres])
 
   if (loading) {
     return (
@@ -124,6 +109,22 @@ function Movies() {
         <div className="flex flex-col items-center">
           <div className="w-8 h-8 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin mb-3"></div>
           <p className="text-gray-400">Loading movies...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-[80vh] text-white">
+        <div className="flex flex-col items-center">
+          <p className="text-gray-400">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-[#5ccfee] text-black rounded hover:bg-[#4ab9d9]"
+          >
+            Retry
+          </button>
         </div>
       </div>
     )
@@ -155,8 +156,8 @@ function Movies() {
                   Genre
                 </option>
                 {genres.map((genre) => (
-                  <option key={genre} value={genre}>
-                    {genre}
+                  <option key={genre.id} value={genre.name}>
+                    {genre.name}
                   </option>
                 ))}
               </select>

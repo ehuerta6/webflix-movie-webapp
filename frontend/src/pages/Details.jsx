@@ -1,70 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import placeholderImg from '../assets/profile-pic.jpg'
-
-// Mock data for cast members - adding more to demonstrate scrolling
-const mockCast = [
-  {
-    id: 'cast-1',
-    name: 'Actor Name 1',
-    character: 'Character 1',
-    profile: null,
-  },
-  {
-    id: 'cast-2',
-    name: 'Actor Name 2',
-    character: 'Character 2',
-    profile: null,
-  },
-  {
-    id: 'cast-3',
-    name: 'Actor Name 3',
-    character: 'Character 3',
-    profile: null,
-  },
-  {
-    id: 'cast-4',
-    name: 'Actor Name 4',
-    character: 'Character 4',
-    profile: null,
-  },
-  {
-    id: 'cast-5',
-    name: 'Actor Name 5',
-    character: 'Character 5',
-    profile: null,
-  },
-  {
-    id: 'cast-6',
-    name: 'Actor Name 6',
-    character: 'Character 6',
-    profile: null,
-  },
-  {
-    id: 'cast-7',
-    name: 'Actor Name 7',
-    character: 'Character 7',
-    profile: null,
-  },
-  {
-    id: 'cast-8',
-    name: 'Actor Name 8',
-    character: 'Character 8',
-    profile: null,
-  },
-  {
-    id: 'cast-9',
-    name: 'Actor Name 9',
-    character: 'Character 9',
-    profile: null,
-  },
-  {
-    id: 'cast-10',
-    name: 'Actor Name 10',
-    character: 'Character 10',
-    profile: null,
-  },
-]
+import { fetchMovieDetails, fetchShowDetails } from '../services/api'
 
 function Details() {
   const { id, type } = useParams() // type will be either 'movie' or 'tv'
@@ -72,65 +9,160 @@ function Details() {
   const [similarContent, setSimilarContent] = useState([])
   const [cast, setCast] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    // In a real app, we would fetch data based on the id and type
-    // For now, we'll use mock data
-    setTimeout(() => {
-      // Simulate fetching details data
-      setDetails({
-        id: id || 'movie-1',
-        title: 'The Spectacular Journey',
-        tagline: 'Discover the unknown',
-        poster: null,
-        backdrop: null,
-        rating: '8.7',
-        description:
-          'An epic adventure that follows a group of explorers who discover a hidden world with breathtaking landscapes and mysterious creatures. As they delve deeper into this uncharted territory, they uncover ancient secrets that challenge everything they know about reality.',
-        year: '2023',
-        runtime: 142, // in minutes
-        genres: ['Adventure', 'Fantasy', 'Sci-Fi'],
-        director: 'Director Name',
-        budget: '$150,000,000',
-        revenue: '$320,000,000',
-        status: 'Released',
-        language: 'English',
-        productionCompanies: ['Studio A', 'Productions B'],
-        trailer: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-      })
+    const fetchDetails = async () => {
+      setLoading(true)
+      setError(null)
 
-      // Simulate fetching cast data
-      setCast(mockCast)
+      try {
+        let data
 
-      // Simulate fetching similar content
-      setSimilarContent(generateSimilarContent(6))
+        // Fetch details based on content type (movie or tv)
+        if (type === 'movie') {
+          data = await fetchMovieDetails(id)
+        } else if (type === 'tv') {
+          data = await fetchShowDetails(id)
+        } else {
+          throw new Error('Invalid content type')
+        }
 
-      setLoading(false)
-    }, 1000)
+        if (data) {
+          // Format details for our component
+          const formattedDetails = {
+            id: data.id,
+            title: data.title || data.name,
+            tagline: data.tagline || '',
+            poster: data.poster_path
+              ? `https://image.tmdb.org/t/p/w500${data.poster_path}`
+              : null,
+            backdrop: data.backdrop_path
+              ? `https://image.tmdb.org/t/p/original${data.backdrop_path}`
+              : null,
+            rating: data.vote_average.toFixed(1),
+            description: data.overview,
+            year:
+              data.release_date || data.first_air_date
+                ? (data.release_date || data.first_air_date).substring(0, 4)
+                : 'Unknown',
+            runtime:
+              data.runtime ||
+              (data.episode_run_time && data.episode_run_time[0]),
+            genres: data.genres ? data.genres.map((genre) => genre.name) : [],
+            status: data.status,
+            language: data.original_language,
+            budget: data.budget ? `$${data.budget.toLocaleString()}` : 'N/A',
+            revenue: data.revenue ? `$${data.revenue.toLocaleString()}` : 'N/A',
+            productionCompanies: data.production_companies
+              ? data.production_companies.map((company) => company.name)
+              : [],
+            trailer: getTrailerUrl(data.videos),
+          }
+
+          setDetails(formattedDetails)
+
+          // Extract cast information
+          if (data.credits && data.credits.cast) {
+            const formattedCast = data.credits.cast
+              .slice(0, 10)
+              .map((person) => ({
+                id: person.id,
+                name: person.name,
+                character: person.character,
+                profile: person.profile_path
+                  ? `https://image.tmdb.org/t/p/w185${person.profile_path}`
+                  : null,
+              }))
+
+            setCast(formattedCast)
+          }
+
+          // Extract similar content
+          if (data.similar && data.similar.results) {
+            const formattedSimilar = data.similar.results
+              .slice(0, 6)
+              .map((item) => ({
+                id: item.id,
+                title: item.title || item.name,
+                poster: item.poster_path
+                  ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+                  : null,
+                rating: item.vote_average.toFixed(1),
+                genre: item.genre_ids
+                  ? getGenreName(item.genre_ids[0])
+                  : 'Unknown',
+                year:
+                  item.release_date || item.first_air_date
+                    ? (item.release_date || item.first_air_date).substring(0, 4)
+                    : 'Unknown',
+              }))
+
+            setSimilarContent(formattedSimilar)
+          }
+        } else {
+          throw new Error('Failed to fetch content details')
+        }
+      } catch (err) {
+        console.error('Error fetching details:', err)
+        setError(`Failed to load ${type} details. Please try again later.`)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDetails()
   }, [id, type])
 
-  // Generate similar movies/shows
-  const generateSimilarContent = (count) => {
-    const genres = [
-      'Action',
-      'Drama',
-      'Comedy',
-      'Sci-Fi',
-      'Horror',
-      'Romance',
-      'Thriller',
-      'Fantasy',
-    ]
-    const years = ['2023', '2022', '2021', '2020', '2024']
+  // Helper function to extract trailer URL
+  const getTrailerUrl = (videos) => {
+    if (!videos || !videos.results || videos.results.length === 0) {
+      return null
+    }
 
-    return Array.from({ length: count }, (_, i) => ({
-      id: `similar-${i}`,
-      title: `Similar Title ${i + 1}`,
-      poster: null,
-      rating: (Math.random() * 5 + 5).toFixed(1),
-      genre: genres[Math.floor(Math.random() * genres.length)],
-      year: years[Math.floor(Math.random() * years.length)],
-    }))
+    // Find official trailer if available
+    const trailer =
+      videos.results.find(
+        (video) => video.type === 'Trailer' && video.site === 'YouTube'
+      ) || videos.results[0]
+
+    return trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null
+  }
+
+  // Helper function to convert genre ID to name (simplified)
+  const getGenreName = (genreId) => {
+    // Common genre map (simplified)
+    const genreMap = {
+      28: 'Action',
+      12: 'Adventure',
+      16: 'Animation',
+      35: 'Comedy',
+      80: 'Crime',
+      99: 'Documentary',
+      18: 'Drama',
+      10751: 'Family',
+      14: 'Fantasy',
+      36: 'History',
+      27: 'Horror',
+      10402: 'Music',
+      9648: 'Mystery',
+      10749: 'Romance',
+      878: 'Science Fiction',
+      10770: 'TV Movie',
+      53: 'Thriller',
+      10752: 'War',
+      37: 'Western',
+      10759: 'Action & Adventure',
+      10762: 'Kids',
+      10763: 'News',
+      10764: 'Reality',
+      10765: 'Sci-Fi & Fantasy',
+      10766: 'Soap',
+      10767: 'Talk',
+      10768: 'War & Politics',
+    }
+
+    return genreMap[genreId] || 'Unknown'
   }
 
   if (loading) {
@@ -139,6 +171,38 @@ function Details() {
         <div className="flex flex-col items-center">
           <div className="w-8 h-8 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin mb-3"></div>
           <p className="text-gray-400">Loading content...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-[80vh] text-white">
+        <div className="flex flex-col items-center">
+          <p className="text-gray-400">{error}</p>
+          <Link
+            to="/"
+            className="mt-4 px-4 py-2 bg-[#5ccfee] text-black rounded hover:bg-[#4ab9d9]"
+          >
+            Back to Home
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  if (!details) {
+    return (
+      <div className="flex justify-center items-center h-[80vh] text-white">
+        <div className="flex flex-col items-center">
+          <p className="text-gray-400">Content not found</p>
+          <Link
+            to="/"
+            className="mt-4 px-4 py-2 bg-[#5ccfee] text-black rounded hover:bg-[#4ab9d9]"
+          >
+            Back to Home
+          </Link>
         </div>
       </div>
     )
@@ -199,215 +263,220 @@ function Details() {
 
               {/* Tagline */}
               {details.tagline && (
-                <p className="text-[#5ccfee] italic mt-1">
-                  "{details.tagline}"
+                <p className="text-[#5ccfee] italic mt-1 mb-4">
+                  {details.tagline}
                 </p>
               )}
 
-              {/* Genres */}
-              <div className="flex flex-wrap gap-2 mt-3">
-                {details.genres.map((genre) => (
-                  <span
-                    key={genre}
-                    className="px-2.5 py-1 bg-[#1e1e1e] text-white text-sm rounded-full"
-                  >
-                    {genre}
-                  </span>
-                ))}
-              </div>
-
-              {/* Rating */}
-              <div className="mt-4 flex items-center gap-2">
-                <div className="bg-[#1e1e1e] px-2.5 py-1.5 rounded flex items-center gap-1.5">
-                  <span className="text-[#5ccfee]">★</span>
-                  <span className="text-white font-medium">
+              {/* Rating and Genres */}
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xl text-[#5ccfee] font-semibold">
                     {details.rating}
                   </span>
-                  <span className="text-gray-400 text-sm">/10</span>
+                  <span className="text-sm text-gray-400">/10</span>
                 </div>
-                <span className="text-gray-400">•</span>
-                <span className="text-gray-300">
-                  {Math.floor(details.runtime / 60)}h {details.runtime % 60}m
-                </span>
+
+                <div className="w-px h-5 bg-gray-700"></div>
+
+                <div className="text-gray-300 text-sm">
+                  {details.genres.join(', ')}
+                </div>
+
+                {details.runtime && (
+                  <>
+                    <div className="w-px h-5 bg-gray-700"></div>
+                    <div className="text-gray-300 text-sm">
+                      {Math.floor(details.runtime / 60)}h {details.runtime % 60}
+                      m
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Overview */}
-              <div className="mt-5">
+              <div className="mb-6">
                 <h2 className="text-xl text-white mb-2">Overview</h2>
                 <p className="text-gray-300 leading-relaxed">
-                  {details.description}
+                  {details.description || 'No overview available.'}
                 </p>
               </div>
 
-              {/* Director and other details */}
-              <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
-                <div>
-                  <span className="text-gray-400">Director:</span>{' '}
-                  <span className="text-white">{details.director}</span>
-                </div>
-                <div>
-                  <span className="text-gray-400">Status:</span>{' '}
-                  <span className="text-white">{details.status}</span>
-                </div>
-                <div>
-                  <span className="text-gray-400">Language:</span>{' '}
-                  <span className="text-white">{details.language}</span>
-                </div>
-                <div>
-                  <span className="text-gray-400">Budget:</span>{' '}
-                  <span className="text-white">{details.budget}</span>
-                </div>
-                <div>
-                  <span className="text-gray-400">Revenue:</span>{' '}
-                  <span className="text-white">{details.revenue}</span>
-                </div>
-                <div>
-                  <span className="text-gray-400">Production:</span>{' '}
-                  <span className="text-white">
-                    {details.productionCompanies.join(', ')}
-                  </span>
-                </div>
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-3 mb-8">
+                {details.trailer && (
+                  <a
+                    href={details.trailer}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="primary-button flex items-center gap-1"
+                  >
+                    <span>▶</span> Watch Trailer
+                  </a>
+                )}
+                <button className="secondary-button">Add to Watchlist</button>
+                <button className="secondary-button">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                    />
+                  </svg>
+                </button>
+                <button className="secondary-button">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                    />
+                  </svg>
+                </button>
               </div>
 
-              {/* Buttons */}
-              <div className="mt-6 flex gap-3">
-                <a
-                  href={details.trailer}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="primary-button flex items-center gap-1.5"
+              {/* Additional Info Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-6 text-sm">
+                <div>
+                  <h3 className="text-gray-400 mb-1">Status</h3>
+                  <p className="text-white">{details.status}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-gray-400 mb-1">Original Language</h3>
+                  <p className="text-white">
+                    {details.language?.toUpperCase() || 'Unknown'}
+                  </p>
+                </div>
+
+                {type === 'movie' && (
+                  <>
+                    <div>
+                      <h3 className="text-gray-400 mb-1">Budget</h3>
+                      <p className="text-white">{details.budget}</p>
+                    </div>
+
+                    <div>
+                      <h3 className="text-gray-400 mb-1">Revenue</h3>
+                      <p className="text-white">{details.revenue}</p>
+                    </div>
+                  </>
+                )}
+
+                <div className="col-span-2">
+                  <h3 className="text-gray-400 mb-1">Production</h3>
+                  <p className="text-white">
+                    {details.productionCompanies.join(', ') || 'Unknown'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Cast Section */}
+      <div className="mx-auto max-w-screen-xl px-4 mt-12">
+        <h2 className="text-xl text-white mb-4">Cast</h2>
+        <div className="overflow-x-auto pb-4 -mx-4 px-4">
+          <div className="flex space-x-4" style={{ minWidth: 'max-content' }}>
+            {cast.length > 0 ? (
+              cast.map((person) => (
+                <div
+                  key={person.id}
+                  className="w-32 flex-shrink-0 bg-[#1e1e1e] rounded overflow-hidden"
                 >
-                  <span>▶</span> Watch Trailer
-                </a>
-                <button className="secondary-button">+ Add to Watchlist</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Cast Section - Horizontal Scrollable */}
-      <div className="max-w-screen-xl mx-auto px-4 mt-12">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl text-white">Cast</h2>
-          <div className="flex gap-2">
-            <button
-              className="text-white bg-[#1e1e1e] rounded-full w-8 h-8 flex items-center justify-center hover:bg-[#2a2a2a] transition-colors"
-              onClick={() => {
-                const castContainer = document.getElementById('cast-scroll')
-                if (castContainer) {
-                  castContainer.scrollLeft -= 200
-                }
-              }}
-            >
-              ←
-            </button>
-            <button
-              className="text-white bg-[#1e1e1e] rounded-full w-8 h-8 flex items-center justify-center hover:bg-[#2a2a2a] transition-colors"
-              onClick={() => {
-                const castContainer = document.getElementById('cast-scroll')
-                if (castContainer) {
-                  castContainer.scrollLeft += 200
-                }
-              }}
-            >
-              →
-            </button>
-          </div>
-        </div>
-
-        {/* Horizontal scrollable container */}
-        <div
-          id="cast-scroll"
-          className="flex overflow-x-auto pb-4 hide-scrollbar space-x-4"
-          style={{ scrollBehavior: 'smooth' }}
-        >
-          {cast.map((person) => (
-            <div
-              key={person.id}
-              className="flex-shrink-0 w-[120px] bg-[#1e1e1e] rounded overflow-hidden"
-            >
-              <div className="w-full aspect-[2/3]">
-                <img
-                  src={person.profile ? person.profile : placeholderImg}
-                  alt={person.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.onerror = null
-                    e.target.src = placeholderImg
-                  }}
-                />
-              </div>
-              <div className="p-2">
-                <h3 className="text-white text-sm font-medium truncate">
-                  {person.name}
-                </h3>
-                <p className="text-gray-400 text-xs truncate">
-                  {person.character}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Similar Content */}
-      <div className="max-w-screen-xl mx-auto px-4 mt-12">
-        <h2 className="text-xl text-white mb-4">Similar Content</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {similarContent.map((item) => (
-            <div
-              key={item.id}
-              className="bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200 cursor-pointer"
-            >
-              <div className="aspect-[2/3] relative">
-                <img
-                  src={item.poster ? item.poster : placeholderImg}
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.onerror = null
-                    e.target.src = placeholderImg
-                  }}
-                />
-                <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
-                  <span className="text-[#5ccfee]">{item.rating}</span>
-                </div>
-
-                {/* Genre badge */}
-                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-[#5ccfee] font-medium">
-                      {item.genre}
-                    </span>
-                    <span className="text-xs text-gray-300">{item.year}</span>
+                  <div className="w-full h-40 overflow-hidden">
+                    <img
+                      src={person.profile ? person.profile : placeholderImg}
+                      alt={person.name}
+                      className="w-full h-full object-cover object-center"
+                      onError={(e) => {
+                        e.target.onerror = null
+                        e.target.src = placeholderImg
+                      }}
+                    />
+                  </div>
+                  <div className="p-2">
+                    <h3 className="text-white text-sm font-medium truncate">
+                      {person.name}
+                    </h3>
+                    <p className="text-gray-400 text-xs truncate">
+                      {person.character}
+                    </p>
                   </div>
                 </div>
-              </div>
-              <div className="p-2">
-                <h3 className="text-sm text-gray-200 font-medium truncate">
-                  {item.title}
-                </h3>
-              </div>
-            </div>
-          ))}
+              ))
+            ) : (
+              <p className="text-gray-400">No cast information available.</p>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Similar Content Section */}
+      {similarContent.length > 0 && (
+        <div className="mx-auto max-w-screen-xl px-4 mt-12">
+          <h2 className="text-xl text-white mb-4">
+            Similar {type === 'movie' ? 'Movies' : 'Shows'}
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {similarContent.map((item) => (
+              <Link
+                key={item.id}
+                to={`/${type}/${item.id}`}
+                className="bg-[#1e1e1e] rounded overflow-hidden hover:translate-y-[-4px] transition-transform duration-200"
+              >
+                <div className="aspect-[2/3] relative">
+                  <img
+                    src={item.poster ? item.poster : placeholderImg}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.onerror = null
+                      e.target.src = placeholderImg
+                    }}
+                  />
+                  <div className="absolute top-0 right-0 bg-black/50 px-1.5 py-0.5 m-1.5 rounded text-xs">
+                    <span className="text-[#5ccfee]">{item.rating}</span>
+                  </div>
+
+                  {/* Genre badge */}
+                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[#5ccfee] font-medium">
+                        {item.genre}
+                      </span>
+                      <span className="text-xs text-gray-300">{item.year}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-2">
+                  <h3 className="text-sm text-gray-200 font-medium truncate">
+                    {item.title}
+                  </h3>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-
-// Add a style to hide the scrollbar but keep functionality
-const style = document.createElement('style')
-style.textContent = `
-  .hide-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;     /* Firefox */
-  }
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;            /* Chrome, Safari, Opera */
-  }
-`
-document.head.appendChild(style)
 
 export default Details

@@ -1,126 +1,107 @@
 import { useState, useEffect } from 'react'
 import MovieCard from '../components/MovieCard'
-import placeholderImg from '../assets/profile-pic.jpg'
+import { fetchShows, fetchGenres } from '../services/api'
 
 function Shows() {
   const [shows, setShows] = useState([])
   const [filteredShows, setFilteredShows] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   // Filter states
   const [selectedGenre, setSelectedGenre] = useState('All')
   const [sortBy, setSortBy] = useState('Default')
-
-  // Available genres
-  const genres = [
-    'All',
-    'Drama',
-    'Comedy',
-    'Sci-Fi',
-    'Horror',
-    'Action',
-    'Adventure',
-    'Mystery',
-    'Fantasy',
-    'Thriller',
-    'Crime',
-  ]
+  const [genres, setGenres] = useState([{ id: 0, name: 'All' }])
 
   // Sort options
   const sortOptions = ['Default', 'Top Rated', 'Newest', 'Most Popular']
 
+  // Fetch TV show genres when component mounts
   useEffect(() => {
-    // Simulate fetching data
-    setTimeout(() => {
-      const showData = generateShowData(24)
-      setShows(showData)
-      setFilteredShows(showData)
-      setLoading(false)
-    }, 1000)
+    const loadGenres = async () => {
+      try {
+        const genreData = await fetchGenres('tv')
+        if (genreData.genres && genreData.genres.length > 0) {
+          setGenres([{ id: 0, name: 'All' }, ...genreData.genres])
+        }
+      } catch (err) {
+        console.error('Error fetching genres:', err)
+        setError('Failed to load genres. Please try again later.')
+      }
+    }
+
+    loadGenres()
   }, [])
 
-  // Apply filters whenever filter criteria change
+  // Fetch TV shows when component mounts or filters change
   useEffect(() => {
-    if (shows.length === 0) return
+    const loadShows = async () => {
+      setLoading(true)
+      setError(null)
 
-    let result = [...shows]
+      try {
+        // Create filter parameters for API call
+        let params = {}
 
-    // Filter by genre
-    if (selectedGenre !== 'All') {
-      result = result.filter((show) => show.genre === selectedGenre)
+        // Add sorting parameters
+        switch (sortBy) {
+          case 'Top Rated':
+            params.sort_by = 'vote_average.desc'
+            break
+          case 'Newest':
+            params.sort_by = 'first_air_date.desc'
+            break
+          case 'Most Popular':
+            params.sort_by = 'popularity.desc'
+            break
+          default:
+            params.sort_by = 'popularity.desc' // Default sort
+        }
+
+        // Add genre filter if not "All"
+        if (selectedGenre !== 'All' && selectedGenre !== 0) {
+          const genreId = genres.find((g) => g.name === selectedGenre)?.id
+          if (genreId) params.with_genres = genreId
+        }
+
+        const data = await fetchShows(params)
+
+        if (data.results) {
+          // Transform the data format to match what our components expect
+          const formattedShows = data.results.map((show) => ({
+            id: show.id,
+            type: 'tv',
+            title: show.name,
+            poster: show.poster_path
+              ? `https://image.tmdb.org/t/p/w500${show.poster_path}`
+              : null,
+            rating: show.vote_average.toFixed(1),
+            genre:
+              show.genre_ids && show.genre_ids.length > 0
+                ? genres.find((g) => g.id === show.genre_ids[0])?.name ||
+                  'Unknown'
+                : 'Unknown',
+            year: show.first_air_date
+              ? show.first_air_date.substring(0, 4)
+              : 'Unknown',
+            popularity: show.popularity,
+          }))
+
+          setShows(formattedShows)
+          setFilteredShows(formattedShows)
+        } else {
+          setError('No TV shows found. Please try again later.')
+        }
+      } catch (err) {
+        console.error('Error fetching TV shows:', err)
+        setError('Failed to load TV shows. Please try again later.')
+      } finally {
+        setLoading(false)
+      }
     }
 
-    // Apply sorting
-    switch (sortBy) {
-      case 'Top Rated':
-        result = [...result].sort(
-          (a, b) => parseFloat(b.rating) - parseFloat(a.rating)
-        )
-        break
-      case 'Newest':
-        result = [...result].sort((a, b) => parseInt(b.year) - parseInt(a.year))
-        break
-      case 'Most Popular':
-        // Simulating popularity with a random factor for demo purposes
-        result = [...result].sort((a, b) => b.popularity - a.popularity)
-        break
-      default:
-        // Default sort - keep original order
-        break
-    }
-
-    setFilteredShows(result)
-  }, [selectedGenre, sortBy, shows])
-
-  // Generate mock TV show data
-  const generateShowData = (count) => {
-    const genres = [
-      'Drama',
-      'Comedy',
-      'Sci-Fi',
-      'Horror',
-      'Action',
-      'Adventure',
-      'Mystery',
-      'Fantasy',
-      'Thriller',
-      'Crime',
-    ]
-    const years = ['2023', '2022', '2021', '2020', '2024']
-    const showTitles = [
-      'Stranger Things',
-      'The Crown',
-      'Breaking Bad',
-      'The Mandalorian',
-      'Game of Thrones',
-      'The Office',
-      'Dark Matter',
-      'Westworld',
-      'The Last of Us',
-      'Black Mirror',
-      'Better Call Saul',
-      'The Walking Dead',
-      'The Witcher',
-      'Succession',
-      'Euphoria',
-      'The Boys',
-    ]
-
-    return Array.from({ length: count }, (_, i) => ({
-      id: `show-${i}`,
-      type: 'tv',
-      title:
-        showTitles[i % showTitles.length] +
-        (i > showTitles.length
-          ? ` ${Math.floor(i / showTitles.length) + 1}`
-          : ''),
-      poster: null,
-      rating: (Math.random() * 5 + 5).toFixed(1),
-      genre: genres[Math.floor(Math.random() * genres.length)],
-      year: years[Math.floor(Math.random() * years.length)],
-      popularity: Math.random() * 10, // Random popularity score for sorting
-    }))
-  }
+    loadShows()
+  }, [sortBy, selectedGenre, genres])
 
   if (loading) {
     return (
@@ -128,6 +109,22 @@ function Shows() {
         <div className="flex flex-col items-center">
           <div className="w-8 h-8 border-2 border-[#5ccfee] border-t-transparent rounded-full animate-spin mb-3"></div>
           <p className="text-gray-400">Loading shows...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-[80vh] text-white">
+        <div className="flex flex-col items-center">
+          <p className="text-gray-400">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-[#5ccfee] text-black rounded hover:bg-[#4ab9d9]"
+          >
+            Retry
+          </button>
         </div>
       </div>
     )
@@ -159,8 +156,8 @@ function Shows() {
                   Genre
                 </option>
                 {genres.map((genre) => (
-                  <option key={genre} value={genre}>
-                    {genre}
+                  <option key={genre.id} value={genre.name}>
+                    {genre.name}
                   </option>
                 ))}
               </select>
