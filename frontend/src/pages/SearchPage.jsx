@@ -576,26 +576,29 @@ function SearchPage() {
 
   return (
     <div className="min-h-screen bg-[#121212] text-white pb-10">
-      {/* New prominently featured search bar at the top */}
-      <div className="w-full px-4 py-8 bg-[#1a1a1a] border-b border-[#2a2a2a] mb-8">
-        <form onSubmit={handleSearchSubmit} className="max-w-4xl mx-auto">
-          <div className="relative">
+      {/* New minimalistic search bar at the top */}
+      <div className="w-full px-4 py-6 bg-[#1a1a1a] border-b border-[#2a2a2a] mb-8">
+        <form
+          onSubmit={handleSearchSubmit}
+          className="max-w-2xl mx-auto flex flex-col gap-3"
+        >
+          <div className="relative flex items-center">
             <input
               type="text"
-              placeholder="Search for movies, TV shows, people..."
+              placeholder="Search..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full bg-[#1e1e1e] text-white px-5 py-4 text-lg rounded-full focus:outline-none focus:ring-2 focus:ring-[#5ccfee] pr-12"
+              className="w-full bg-[#252525] text-white px-4 py-2 text-base rounded-md focus:outline-none focus:ring-1 focus:ring-[#5ccfee] pr-10"
               autoFocus
             />
             <button
               type="submit"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5ccfee] hover:text-white p-2"
+              className="absolute right-3 text-[#5ccfee] hover:text-white"
               aria-label="Search"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
+                className="h-5 w-5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -609,6 +612,37 @@ function SearchPage() {
               </svg>
             </button>
           </div>
+
+          {/* Genre selector */}
+          {genreList.length > 0 && (
+            <div className="flex justify-center flex-wrap gap-2">
+              {genreList.slice(0, 10).map((genre) => (
+                <button
+                  key={genre.id}
+                  type="button"
+                  onClick={() => {
+                    navigate(`/search?q=genre-${genre.id}`)
+                    setIsGenreSearch(true)
+                    setCurrentPage(1)
+                  }}
+                  className="px-3 py-1 text-xs bg-[#252525] hover:bg-[#303030] text-gray-300 rounded-full transition-colors"
+                >
+                  {genre.name}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  // Open a modal or dropdown with all genres
+                  // For now, we'll just console.log
+                  console.log('Show all genres')
+                }}
+                className="px-3 py-1 text-xs bg-[#252525] hover:bg-[#303030] text-[#5ccfee] rounded-full transition-colors"
+              >
+                More
+              </button>
+            </div>
+          )}
         </form>
       </div>
 
