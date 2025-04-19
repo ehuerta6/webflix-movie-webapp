@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchMovies, fetchGenres } from '../services/api'
 import { useAuth } from '../context/AuthContext'
-import { doc, updateDoc } from 'firebase/firestore'
+import { doc, updateDoc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase/firebase'
 
 // Helper function to validate movie data
@@ -105,6 +105,11 @@ const StatItem = ({ icon, label, value }) => (
 function User() {
   const navigate = useNavigate()
   const { userProfile, currentUser, fetchUserProfile } = useAuth()
+  const [userStats, setUserStats] = useState({
+    movieCount: 0,
+    showCount: 0,
+    joinDate: null,
+  })
 
   // API data state
   const [genreMap, setGenreMap] = useState({})
@@ -138,6 +143,37 @@ function User() {
     confirmPassword: '',
   })
 
+  // Calculate user statistics
+  useEffect(() => {
+    if (userProfile) {
+      const favorites = userProfile.favorites || []
+      const watchlist = userProfile.watchlist || []
+
+      const movieFavorites = favorites.filter(
+        (item) => item.type === 'movie'
+      ).length
+      const showFavorites = favorites.filter(
+        (item) => item.type === 'tv'
+      ).length
+      const movieWatchlist = watchlist.filter(
+        (item) => item.type === 'movie'
+      ).length
+      const showWatchlist = watchlist.filter(
+        (item) => item.type === 'tv'
+      ).length
+
+      const joinDate = userProfile.createdAt
+        ? new Date(userProfile.createdAt.seconds * 1000)
+        : new Date()
+
+      setUserStats({
+        movieCount: movieFavorites + movieWatchlist,
+        showCount: showFavorites + showWatchlist,
+        joinDate,
+      })
+    }
+  }, [userProfile])
+
   // Initialize form data when userProfile changes
   useEffect(() => {
     if (userProfile) {
@@ -164,6 +200,139 @@ function User() {
 
     loadUserProfile()
   }, [fetchUserProfile])
+
+  // Load genre data for mapping IDs to names
+  useEffect(() => {
+    const loadGenres = async () => {
+      setLoading((prev) => ({ ...prev, genres: true }))
+      try {
+        // Fetch movie and TV genres
+        const [movieGenres, tvGenres] = await Promise.all([
+          fetchGenres('movie'),
+          fetchGenres('tv'),
+        ])
+
+        // Create genre map and list
+        const map = {}
+        const genreNames = new Set()
+
+        // Add movie genres to map
+        movieGenres.forEach((genre) => {
+          map[genre.id] = genre.name
+          genreNames.add(genre.name)
+        })
+
+        // Add TV genres to map (some may overlap)
+        tvGenres.forEach((genre) => {
+          map[genre.id] = genre.name
+          genreNames.add(genre.name)
+        })
+
+        setGenreMap(map)
+        setAvailableGenres([...genreNames].sort())
+      } catch (error) {
+        console.error('Error fetching genres:', error)
+      } finally {
+        setLoading((prev) => ({ ...prev, genres: false }))
+      }
+    }
+
+    loadGenres()
+  }, [])
+
+  // Load 'liked' movies data
+  useEffect(() => {
+    const fetchLikedMovies = async () => {
+      if (!Object.keys(genreMap).length) return
+
+      setLoading((prev) => ({ ...prev, liked: true }))
+      try {
+        // In a real app, you would fetch the user's liked movies from Firestore
+        // For now, just fetch some popular movies as an example
+        const data = await fetchMovies({ sort_by: 'popularity.desc' }, 1, 10)
+
+        // Filter and format valid movies
+        const formattedMovies = data.results
+          .filter(isValidMovie)
+          .map((movie) => formatMovieData(movie, genreMap))
+          .slice(0, 8)
+
+        setLikedMovies(formattedMovies)
+      } catch (error) {
+        console.error('Error fetching liked movies:', error)
+      } finally {
+        setLoading((prev) => ({ ...prev, liked: false }))
+      }
+    }
+
+    fetchLikedMovies()
+  }, [genreMap])
+
+  // Load 'watchlist' movies data
+  useEffect(() => {
+    const fetchWatchlistMovies = async () => {
+      if (!Object.keys(genreMap).length) return
+
+      setLoading((prev) => ({ ...prev, watchlist: true }))
+      try {
+        // In a real app, you would fetch the user's watchlist from Firestore
+        // For now, just fetch some top-rated movies as an example
+        const data = await fetchMovies({ sort_by: 'vote_average.desc' }, 1, 10)
+
+        // Filter and format valid movies
+        const formattedMovies = data.results
+          .filter(isValidMovie)
+          .map((movie) => formatMovieData(movie, genreMap))
+          .slice(0, 8)
+
+        setWatchlistMovies(formattedMovies)
+      } catch (error) {
+        console.error('Error fetching watchlist movies:', error)
+      } finally {
+        setLoading((prev) => ({ ...prev, watchlist: false }))
+      }
+    }
+
+    fetchWatchlistMovies()
+  }, [genreMap])
+
+  // Fetch movie recommendations based on favorite genres
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      if (!userProfile?.favoriteGenres?.length || !Object.keys(genreMap).length)
+        return
+
+      setLoading((prev) => ({ ...prev, recommendations: true }))
+      try {
+        // Look up genre IDs from genre names
+        const genreIds = Object.entries(genreMap)
+          .filter(([_, name]) => userProfile.favoriteGenres.includes(name))
+          .map(([id]) => id)
+          .join(',')
+
+        if (!genreIds) {
+          setRecommendedMovies([])
+          return
+        }
+
+        const data = await fetchMovies({ with_genres: genreIds }, 1, 10)
+
+        // Filter and format valid movies
+        const formattedMovies = data.results
+          .filter(isValidMovie)
+          .map((movie) => formatMovieData(movie, genreMap))
+          .slice(0, 8)
+
+        setRecommendedMovies(formattedMovies)
+      } catch (error) {
+        console.error('Error fetching recommendations:', error)
+      } finally {
+        setLoading((prev) => ({ ...prev, recommendations: false }))
+      }
+    }
+
+    fetchRecommendations()
+  }, [genreMap, userProfile])
 
   // Event handlers
   const handleGoBack = () => navigate(-1)
@@ -243,7 +412,15 @@ function User() {
     setIsSettingsOpen(false)
   }
 
-  // Action buttons for different collections
+  // Format date to "Joined Month YYYY"
+  const formatJoinDate = (date) => {
+    if (!date) return 'New Member'
+    return `Joined ${date.toLocaleString('default', {
+      month: 'long',
+    })} ${date.getFullYear()}`
+  }
+
+  // Movie collection actions
   const collectionActions = {
     liked: (movie) => (
       <>
@@ -290,21 +467,14 @@ function User() {
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+            viewBox="0 0 20 20"
+            fill="currentColor"
           >
+            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
             <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              fillRule="evenodd"
+              d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+              clipRule="evenodd"
             />
           </svg>
         </button>
@@ -315,15 +485,13 @@ function User() {
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+            viewBox="0 0 20 20"
+            fill="currentColor"
           >
             <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              fillRule="evenodd"
+              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+              clipRule="evenodd"
             />
           </svg>
         </button>
@@ -381,465 +549,338 @@ function User() {
     </div>
   )
 
-  // Load genre data for mapping IDs to names
-  useEffect(() => {
-    const loadGenres = async () => {
-      setLoading((prev) => ({ ...prev, genres: true }))
-      try {
-        // Fetch movie and TV genres
-        const [movieGenres, tvGenres] = await Promise.all([
-          fetchGenres('movie'),
-          fetchGenres('tv'),
-        ])
-
-        // Create genre map and list
-        const map = {}
-        const genreNames = new Set()
-
-        // Add movie genres to map
-        movieGenres.forEach((genre) => {
-          map[genre.id] = genre.name
-          genreNames.add(genre.name)
-        })
-
-        // Add TV genres to map (some may overlap)
-        tvGenres.forEach((genre) => {
-          map[genre.id] = genre.name
-          genreNames.add(genre.name)
-        })
-
-        setGenreMap(map)
-        setAvailableGenres([...genreNames].sort())
-      } catch (error) {
-        console.error('Error fetching genres:', error)
-      } finally {
-        setLoading((prev) => ({ ...prev, genres: false }))
-      }
-    }
-
-    loadGenres()
-  }, [])
-
-  // Load 'liked' movies data
-  useEffect(() => {
-    const fetchLikedMovies = async () => {
-      if (!Object.keys(genreMap).length) return
-
-      setLoading((prev) => ({ ...prev, liked: true }))
-      try {
-        const data = await fetchMovies({ sort_by: 'popularity.desc' }, 1, 10)
-
-        // Filter and format valid movies
-        const formattedMovies = data.results
-          .filter(isValidMovie)
-          .map((movie) => formatMovieData(movie, genreMap))
-          .slice(0, 8)
-
-        setLikedMovies(formattedMovies)
-
-        // Update stats
-        setUserData((prev) => ({
-          ...prev,
-          stats: {
-            ...prev.stats,
-            moviesLiked: formattedMovies.length,
-          },
-        }))
-      } catch (error) {
-        console.error('Error fetching liked movies:', error)
-      } finally {
-        setLoading((prev) => ({ ...prev, liked: false }))
-      }
-    }
-
-    fetchLikedMovies()
-  }, [genreMap])
-
-  // Load 'watchlist' movies data
-  useEffect(() => {
-    const fetchWatchlistMovies = async () => {
-      if (!Object.keys(genreMap).length) return
-
-      setLoading((prev) => ({ ...prev, watchlist: true }))
-      try {
-        const data = await fetchMovies({ sort_by: 'vote_average.desc' }, 1, 10)
-
-        // Filter and format valid movies
-        const formattedMovies = data.results
-          .filter(isValidMovie)
-          .map((movie) => formatMovieData(movie, genreMap))
-          .slice(0, 8)
-
-        setWatchlistMovies(formattedMovies)
-
-        // Update stats
-        setUserData((prev) => ({
-          ...prev,
-          stats: {
-            ...prev.stats,
-            watchlistCount: formattedMovies.length,
-          },
-        }))
-      } catch (error) {
-        console.error('Error fetching watchlist movies:', error)
-      } finally {
-        setLoading((prev) => ({ ...prev, watchlist: false }))
-      }
-    }
-
-    fetchWatchlistMovies()
-  }, [genreMap])
-
-  // Fetch movie recommendations based on favorite genres
-  useEffect(() => {
-    const fetchRecommendations = async () => {
-      if (!userData.favoriteGenres.length || !Object.keys(genreMap).length)
-        return
-
-      setLoading((prev) => ({ ...prev, recommendations: true }))
-      try {
-        // Look up genre IDs from genre names
-        const genreIds = Object.entries(genreMap)
-          .filter(([_, name]) => userData.favoriteGenres.includes(name))
-          .map(([id]) => id)
-          .join(',')
-
-        if (!genreIds) {
-          setRecommendedMovies([])
-          return
-        }
-
-        const data = await fetchMovies({ with_genres: genreIds }, 1, 10)
-
-        // Filter and format valid movies
-        const formattedMovies = data.results
-          .filter(isValidMovie)
-          .map((movie) => formatMovieData(movie, genreMap))
-          .slice(0, 8)
-
-        setRecommendedMovies(formattedMovies)
-      } catch (error) {
-        console.error('Error fetching recommendations:', error)
-      } finally {
-        setLoading((prev) => ({ ...prev, recommendations: false }))
-      }
-    }
-
-    fetchRecommendations()
-  }, [genreMap, userData.favoriteGenres])
+  if (!currentUser) {
+    navigate('/login')
+    return null
+  }
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white py-4 px-3">
-      {loading.profile ? (
-        <div className="flex items-center justify-center h-screen">
-          <div className="animate-spin h-10 w-10 border-4 border-[#5ccfee] rounded-full border-t-transparent"></div>
-        </div>
-      ) : (
-        <div className="max-w-5xl mx-auto space-y-4">
-          {/* Header with Back Button and Page Title */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleGoBack}
-                className="flex items-center gap-1.5 text-white bg-[#1e1e1e] hover:bg-[#2e2e2e] px-3 py-1.5 rounded-md transition-colors text-sm"
+    <div className="min-h-screen bg-[#121212] text-white pb-16">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* User Profile Header Section */}
+        <div className="mb-12">
+          <div className="flex justify-between items-start mb-6">
+            <button
+              onClick={handleGoBack}
+              className="text-gray-400 hover:text-white flex items-center gap-1"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                <span className="text-sm">←</span> Go Back
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+              <span>Back</span>
+            </button>
+
+            <div className="flex gap-3">
+              {!isEditingProfile && (
+                <button
+                  onClick={handleProfileEdit}
+                  className="flex items-center gap-1 text-sm font-medium text-white bg-[#1e1e1e] hover:bg-[#2a2a2a] px-3 py-1.5 rounded-md"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                    />
+                  </svg>
+                  Edit Profile
+                </button>
+              )}
+              <button
+                onClick={handleSettingsToggle}
+                className="flex items-center gap-1 text-sm font-medium text-white bg-[#1e1e1e] hover:bg-[#2a2a2a] px-3 py-1.5 rounded-md"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                Settings
               </button>
-              <h1 className="text-2xl font-bold">User Profile</h1>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
-            {/* User Profile Card - Redesigned for minimalism */}
-            <div className="bg-[#1e1e1e] rounded-lg shadow-md overflow-hidden border border-[#2a2a2a]">
-              {isEditingProfile ? (
-                // Edit profile form
-                <form onSubmit={handleProfileSubmit} className="p-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-400 mb-1">
-                        Display Name
-                      </label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={editForm.name}
-                        onChange={handleEditFormChange}
-                        className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-gray-400 mb-1">
-                        About Me
-                      </label>
-                      <textarea
-                        name="bio"
-                        value={editForm.bio}
-                        onChange={handleEditFormChange}
-                        rows="3"
-                        className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee] resize-none"
-                      ></textarea>
-                    </div>
-
-                    {/* Favorite Genres Selection */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-400 mb-2">
-                        Favorite Genres
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {loading.genres ? (
-                          <div className="flex items-center text-gray-400 text-xs py-1">
-                            <div className="animate-spin h-3 w-3 border-b border-[#5ccfee] rounded-full mr-2"></div>
-                            Loading genres...
-                          </div>
-                        ) : (
-                          availableGenres.map((genre) => (
-                            <GenreToggle
-                              key={genre}
-                              genre={genre}
-                              selected={editForm.selectedGenres.includes(genre)}
-                              onToggle={handleGenreToggle}
-                            />
-                          ))
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end space-x-3 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingProfile(false)}
-                        className="px-4 py-2 bg-[#333] hover:bg-[#444] text-sm rounded transition duration-200"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 bg-[#5ccfee] hover:bg-[#4ab3d3] text-black text-sm font-semibold rounded transition duration-200"
-                        disabled={loading.profile}
-                      >
-                        {loading.profile ? 'Saving...' : 'Save'}
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              ) : (
-                // Minimalist profile display
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-6">
-                    <div>
-                      <h3 className="text-2xl font-bold text-white mb-1">
-                        {userProfile?.displayName || 'User'}
-                      </h3>
-                      <p className="text-gray-400 text-sm max-w-xl">
-                        {userProfile?.bio || 'No bio available'}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleProfileEdit}
-                        className="flex items-center px-3 py-1.5 bg-transparent hover:bg-[#2a2a2a] border border-[#444] text-sm rounded-md transition duration-200"
-                        aria-label="Edit profile"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 mr-1.5"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                        </svg>
-                        Edit
-                      </button>
-                      <button
-                        onClick={handleSettingsToggle}
-                        className="flex items-center px-3 py-1.5 bg-transparent hover:bg-[#2a2a2a] border border-[#444] text-sm rounded-md transition duration-200"
-                        aria-label="Settings"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 mr-1.5"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        Settings
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* User Activity Stats - More visual and minimalistic */}
-                  <div className="grid grid-cols-2 gap-3 mb-6">
-                    <div className="bg-[#252525] rounded-md p-4 text-center">
-                      <div className="flex justify-center mb-2">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 text-[#5ccfee]"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                          />
-                        </svg>
-                      </div>
-                      <div className="text-[#5ccfee] text-2xl font-bold mb-1">
-                        {userProfile?.stats?.moviesLiked || 0}
-                      </div>
-                      <div className="text-gray-400 text-xs uppercase tracking-wide">
-                        Liked
-                      </div>
-                    </div>
-                    <div className="bg-[#252525] rounded-md p-4 text-center">
-                      <div className="flex justify-center mb-2">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 text-[#5ccfee]"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
-                          />
-                        </svg>
-                      </div>
-                      <div className="text-[#5ccfee] text-2xl font-bold mb-1">
-                        {userProfile?.stats?.watchlistCount || 0}
-                      </div>
-                      <div className="text-gray-400 text-xs uppercase tracking-wide">
-                        Watchlist
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Favorite Genres */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-300 mb-3">
-                      Favorite Genres
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {loading.genres ? (
-                        <div className="flex items-center text-gray-400 text-xs py-0.5">
-                          <div className="animate-spin h-3 w-3 border-b border-[#5ccfee] rounded-full mr-1"></div>
-                          Loading...
-                        </div>
-                      ) : userProfile?.favoriteGenres?.length > 0 ? (
-                        userProfile.favoriteGenres.map((genre, index) => (
-                          <span
-                            key={index}
-                            className="px-3 py-1.5 bg-[#252525] text-[#5ccfee] rounded-md text-sm"
-                          >
-                            {genre}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-gray-400 text-sm">
-                          No favorite genres selected yet
-                        </span>
-                      )}
-                    </div>
-                  </div>
+          {/* User info card */}
+          <div className="bg-[#1a1a1a] rounded-lg overflow-hidden">
+            {/* Profile header with background */}
+            <div className="h-32 bg-gradient-to-r from-[#00BFFF] to-[#5ccfee] relative">
+              <div className="absolute -bottom-12 left-8 h-24 w-24 bg-[#1a1a1a] rounded-full border-4 border-[#1a1a1a] overflow-hidden">
+                <div className="h-full w-full bg-[#5ccfee] flex items-center justify-center text-3xl font-bold text-[#1a1a1a]">
+                  {userProfile?.displayName?.charAt(0).toUpperCase() ||
+                    currentUser?.email?.charAt(0).toUpperCase() ||
+                    'U'}
                 </div>
-              )}
+              </div>
+            </div>
 
-              {/* Settings Modal */}
+            {/* Profile content */}
+            <div className="pt-16 pb-6 px-8">
+              <div className="mb-4">
+                <h1 className="text-2xl font-bold">
+                  {isEditingProfile ? (
+                    <input
+                      type="text"
+                      name="name"
+                      value={editForm.name}
+                      onChange={handleEditFormChange}
+                      className="bg-[#252525] text-white px-3 py-1.5 rounded border border-[#333] w-full max-w-md"
+                      placeholder="Display Name"
+                    />
+                  ) : (
+                    userProfile?.displayName || 'Webflix User'
+                  )}
+                </h1>
+                <p className="text-gray-400">{currentUser?.email}</p>
+                <p className="text-gray-400 text-sm">
+                  {formatJoinDate(userStats.joinDate)}
+                </p>
+              </div>
+
+              {/* Bio section */}
+              <div className="mb-6">
+                <h2 className="text-sm font-bold text-gray-300 mb-2">
+                  ABOUT ME
+                </h2>
+                {isEditingProfile ? (
+                  <textarea
+                    name="bio"
+                    value={editForm.bio}
+                    onChange={handleEditFormChange}
+                    rows="3"
+                    className="bg-[#252525] text-white px-3 py-1.5 rounded border border-[#333] w-full max-w-lg"
+                    placeholder="Tell us about yourself and what you like to watch..."
+                  ></textarea>
+                ) : (
+                  <p className="text-gray-300">
+                    {userProfile?.bio ||
+                      'No bio yet. Click Edit Profile to add one!'}
+                  </p>
+                )}
+              </div>
+
+              {/* User stats */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                <StatItem
+                  icon={
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-8 w-8 mr-2 text-[#5ccfee]"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
+                      />
+                    </svg>
+                  }
+                  label="Movies"
+                  value={userStats.movieCount}
+                />
+                <StatItem
+                  icon={
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-8 w-8 mr-2 text-[#5ccfee]"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
+                  }
+                  label="TV Shows"
+                  value={userStats.showCount}
+                />
+                <StatItem
+                  icon={
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-8 w-8 mr-2 text-[#5ccfee]"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                      />
+                    </svg>
+                  }
+                  label="Favorites"
+                  value={(userProfile?.favorites || []).length}
+                />
+                <StatItem
+                  icon={
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-8 w-8 mr-2 text-[#5ccfee]"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                      />
+                    </svg>
+                  }
+                  label="Watchlist"
+                  value={(userProfile?.watchlist || []).length}
+                />
+              </div>
+
+              {/* Settings form */}
               {isSettingsOpen && (
-                <div className="border-t border-[#2a2a2a] p-6">
-                  <form onSubmit={handleSettingsSubmit} className="space-y-4">
-                    <h3 className="text-lg font-semibold mb-3 text-white">
-                      Account Settings
-                    </h3>
-
-                    <div>
-                      <label className="block text-xs font-medium text-gray-400 mb-1">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={settingsForm.email}
-                        onChange={handleSettingsFormChange}
-                        className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
-                        disabled
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Email cannot be changed
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-gray-400 mb-1">
-                        Current Password
-                      </label>
-                      <input
-                        type="password"
-                        name="currentPassword"
-                        value={settingsForm.currentPassword}
-                        onChange={handleSettingsFormChange}
-                        className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-gray-400 mb-1">
-                        New Password
-                      </label>
-                      <input
-                        type="password"
-                        name="newPassword"
-                        value={settingsForm.newPassword}
-                        onChange={handleSettingsFormChange}
-                        className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-gray-400 mb-1">
-                        Confirm New Password
-                      </label>
-                      <input
-                        type="password"
-                        name="confirmPassword"
-                        value={settingsForm.confirmPassword}
-                        onChange={handleSettingsFormChange}
-                        className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
-                      />
-                    </div>
-
-                    <div className="flex justify-end space-x-3 pt-2">
-                      <button
-                        type="button"
-                        onClick={handleSettingsToggle}
-                        className="px-4 py-2 bg-[#333] hover:bg-[#444] text-sm rounded transition duration-200"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 bg-[#5ccfee] hover:bg-[#4ab3d3] text-black text-sm font-semibold rounded transition duration-200"
-                      >
-                        Save Changes
-                      </button>
+                <div className="bg-[#1e1e1e] rounded-lg p-6 mb-6">
+                  <h2 className="text-lg font-bold mb-4">Account Settings</h2>
+                  <form onSubmit={handleSettingsSubmit}>
+                    <div className="grid gap-4 max-w-md">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">
+                          Email Address
+                        </label>
+                        <input
+                          type="email"
+                          name="email"
+                          value={settingsForm.email}
+                          onChange={handleSettingsFormChange}
+                          className="bg-[#252525] text-white px-3 py-1.5 rounded border border-[#333] w-full"
+                          placeholder="Email"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">
+                          Current Password
+                        </label>
+                        <input
+                          type="password"
+                          name="currentPassword"
+                          value={settingsForm.currentPassword}
+                          onChange={handleSettingsFormChange}
+                          className="bg-[#252525] text-white px-3 py-1.5 rounded border border-[#333] w-full"
+                          placeholder="Current Password"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">
+                          New Password
+                        </label>
+                        <input
+                          type="password"
+                          name="newPassword"
+                          value={settingsForm.newPassword}
+                          onChange={handleSettingsFormChange}
+                          className="bg-[#252525] text-white px-3 py-1.5 rounded border border-[#333] w-full"
+                          placeholder="New Password"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">
+                          Confirm New Password
+                        </label>
+                        <input
+                          type="password"
+                          name="confirmPassword"
+                          value={settingsForm.confirmPassword}
+                          onChange={handleSettingsFormChange}
+                          className="bg-[#252525] text-white px-3 py-1.5 rounded border border-[#333] w-full"
+                          placeholder="Confirm New Password"
+                        />
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={handleSettingsToggle}
+                          className="px-4 py-2 text-sm font-medium rounded bg-[#252525] text-gray-200 hover:bg-[#333]"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-4 py-2 text-sm font-medium rounded bg-[#5ccfee] text-black hover:bg-[#4abfe0]"
+                        >
+                          Save Changes
+                        </button>
+                      </div>
                     </div>
                   </form>
                 </div>
               )}
-            </div>
 
+              {/* Edit profile form submission buttons */}
+              {isEditingProfile && (
+                <div className="flex gap-3 mt-8">
+                  <button
+                    onClick={() => setIsEditingProfile(false)}
+                    className="px-4 py-2 rounded text-white bg-[#333] hover:bg-[#444]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleProfileSubmit}
+                    className="px-4 py-2 rounded text-black bg-[#5ccfee] hover:bg-[#4abfe0]"
+                  >
+                    Save Profile
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Rest of the component remains unchanged */}
+        {loading.profile ? (
+          <div className="flex items-center justify-center h-screen">
+            <div className="animate-spin h-10 w-10 border-4 border-[#5ccfee] rounded-full border-t-transparent"></div>
+          </div>
+        ) : (
+          <div className="max-w-5xl mx-auto space-y-4">
             {/* Movie Collections */}
             <div className="bg-[#1e1e1e] rounded-lg shadow-md overflow-hidden border border-[#2a2a2a]">
               <div className="p-4 space-y-6">
@@ -867,8 +908,8 @@ function User() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

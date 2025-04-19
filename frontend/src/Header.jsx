@@ -43,6 +43,10 @@ function Header() {
     return 'U'
   }
 
+  const goToUserProfile = () => {
+    navigate('/user')
+  }
+
   return (
     <header className="flex justify-between items-center px-6 py-4 bg-[#1a1a1a] border-b border-[#2a2a2a] text-white">
       <Link
@@ -97,11 +101,15 @@ function Header() {
           <div className="relative">
             <div className="flex items-center gap-2">
               {/* User info display */}
-              <Link to="/user" className="flex items-center gap-2 group">
+              <Link
+                to="/user"
+                className="flex items-center gap-2 group text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer"
+                aria-label="Your Profile"
+              >
                 <div className="w-8 h-8 rounded-full bg-[#5ccfee] flex items-center justify-center text-[#1a1a1a] font-bold group-hover:ring-2 group-hover:ring-white transition-all">
                   {getInitial()}
                 </div>
-                <span className="hidden md:block text-sm font-medium text-white group-hover:text-[#5ccfee]">
+                <span className="hidden md:block">
                   {userProfile?.displayName || 'Profile'}
                 </span>
               </Link>
