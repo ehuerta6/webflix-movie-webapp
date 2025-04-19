@@ -1,19 +1,21 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 function Auth() {
+  const location = useLocation()
+  const isRegisterPage = location.pathname === '/register'
+
+  // Get auth functions from context
+  const { login, signup, loginWithGoogle } = useAuth()
+
   // Login form state
-
-  {
-    /*} const { signUp, googleSignIn, logout, login } = useAuth() */
-  }
-
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [showLoginPassword, setShowLoginPassword] = useState(false)
   const [loginErrors, setLoginErrors] = useState({})
   const [loginLoading, setLoginLoading] = useState(false)
+  const [loginError, setLoginError] = useState('')
 
   // Registration form state
   const [registerEmail, setRegisterEmail] = useState('')
@@ -23,6 +25,7 @@ function Auth() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [registerErrors, setRegisterErrors] = useState({})
   const [registerLoading, setRegisterLoading] = useState(false)
+  const [registerError, setRegisterError] = useState('')
 
   const navigate = useNavigate()
 
@@ -76,43 +79,68 @@ function Auth() {
   }
 
   // Handle login submission
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault()
+    setLoginError('')
 
     if (!validateLoginForm()) return
 
     setLoginLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      setLoginLoading(false)
-
-      // For demo purposes, just navigate to home
+    try {
+      await login(loginEmail, loginPassword)
       navigate('/')
+    } catch (error) {
+      setLoginError(
+        error.code === 'auth/user-not-found' ||
+          error.code === 'auth/wrong-password'
+          ? 'Invalid email or password'
+          : 'An error occurred during login. Please try again.'
+      )
+      console.error('Login error:', error)
+    } finally {
+      setLoginLoading(false)
+    }
+  }
 
-      // In a real app, you'd handle authentication here:
-      // loginUser(loginEmail, loginPassword)
-    }, 1500)
+  // Handle Google sign-in
+  const handleGoogleSignIn = async () => {
+    try {
+      setLoginLoading(true)
+      await loginWithGoogle()
+      navigate('/')
+    } catch (error) {
+      setLoginError('Failed to sign in with Google. Please try again.')
+      console.error('Google sign-in error:', error)
+    } finally {
+      setLoginLoading(false)
+    }
   }
 
   // Handle registration submission
-  const handleRegisterSubmit = (e) => {
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault()
+    setRegisterError('')
 
     if (!validateRegisterForm()) return
 
     setRegisterLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      setRegisterLoading(false)
-
-      // For demo purposes, just navigate to home
+    try {
+      // Get display name from email if not provided
+      const displayName = registerEmail.split('@')[0]
+      await signup(registerEmail, registerPassword, displayName)
       navigate('/')
-
-      // In a real app, you'd handle authentication here:
-      // registerUser(registerEmail, registerPassword)
-    }, 1500)
+    } catch (error) {
+      setRegisterError(
+        error.code === 'auth/email-already-in-use'
+          ? 'Email is already in use'
+          : 'An error occurred during registration. Please try again.'
+      )
+      console.error('Registration error:', error)
+    } finally {
+      setRegisterLoading(false)
+    }
   }
 
   return (
@@ -145,6 +173,13 @@ function Auth() {
 
             <div className="p-4">
               <form onSubmit={handleLoginSubmit} className="space-y-3">
+                {/* Login Error Display */}
+                {loginError && (
+                  <div className="bg-red-500/10 text-red-500 p-3 rounded-md text-sm">
+                    {loginError}
+                  </div>
+                )}
+
                 {/* Email Field */}
                 <div>
                   <label
@@ -325,6 +360,7 @@ function Auth() {
                   <button
                     type="button"
                     className="w-full bg-[#252525] hover:bg-[#303030] text-white font-medium py-2 px-4 rounded-lg border border-[#333] transition-all duration-300 flex items-center justify-center gap-2"
+                    onClick={handleGoogleSignIn}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -367,6 +403,13 @@ function Auth() {
 
             <div className="p-4">
               <form onSubmit={handleRegisterSubmit} className="space-y-3">
+                {/* Register Error Display */}
+                {registerError && (
+                  <div className="bg-red-500/10 text-red-500 p-3 rounded-md text-sm">
+                    {registerError}
+                  </div>
+                )}
+
                 {/* Email Field */}
                 <div>
                   <label
