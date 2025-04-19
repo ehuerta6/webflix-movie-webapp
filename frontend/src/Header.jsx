@@ -1,16 +1,39 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import SearchBar from './components/SearchBar'
 import { useAuth } from './context/AuthContext'
 
 function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [showDropdown, setShowDropdown] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const navigate = useNavigate()
   const { currentUser, userProfile, logout } = useAuth()
-  const dropdownRef = useRef(null)
 
-  // Get first letter of display name or email and capitalize it
+  const handleSearchClick = () => {
+    navigate('/search')
+  }
+
+  const confirmLogout = () => {
+    setShowLogoutConfirm(true)
+  }
+
+  const handleLogout = () => {
+    logout()
+      .then(() => {
+        navigate('/')
+        setShowLogoutConfirm(false)
+      })
+      .catch((error) => {
+        console.error('Failed to log out', error)
+        setShowLogoutConfirm(false)
+      })
+  }
+
+  const cancelLogout = () => {
+    setShowLogoutConfirm(false)
+  }
+
+  // Get capitalized initial for avatar
   const getInitial = () => {
     if (userProfile?.displayName) {
       return userProfile.displayName.charAt(0).toUpperCase()
@@ -18,39 +41,6 @@ function Header() {
       return currentUser.email.charAt(0).toUpperCase()
     }
     return 'U'
-  }
-
-  // Close the dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
-
-  const handleSearchClick = () => {
-    navigate('/search')
-  }
-
-  const handleLogout = async () => {
-    try {
-      await logout()
-      navigate('/')
-      setShowDropdown(false)
-    } catch (error) {
-      console.error('Failed to log out', error)
-    }
-  }
-
-  const handleProfileClick = () => {
-    navigate('/user')
-    setShowDropdown(false)
   }
 
   return (
@@ -104,84 +94,62 @@ function Header() {
         </Link>
 
         {currentUser ? (
-          <div className="relative" ref={dropdownRef}>
-            <button
-              className="flex items-center gap-2 text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 rounded-md transition-all duration-200 hover:bg-[#252525]"
-              onClick={() => setShowDropdown(!showDropdown)}
-              type="button"
-            >
-              <div className="w-8 h-8 rounded-full bg-[#5ccfee] flex items-center justify-center text-[#1a1a1a] font-bold">
-                {getInitial()}
-              </div>
-              <span className="hidden md:block">
-                {userProfile?.displayName || 'Profile'}
-              </span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d={showDropdown ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'}
-                />
-              </svg>
-            </button>
-
-            {showDropdown && (
-              <div className="absolute right-0 mt-2 py-2 w-56 bg-[#252525] rounded-md shadow-xl z-10 border border-[#333]">
-                <div className="px-4 py-2 border-b border-[#333] mb-2">
-                  <div className="text-sm font-medium text-white">
-                    {userProfile?.displayName || 'User'}
-                  </div>
-                  <div className="text-xs text-gray-400 truncate">
-                    {currentUser?.email}
-                  </div>
+          <div className="relative">
+            <div className="flex items-center gap-2">
+              {/* User info display */}
+              <Link to="/user" className="flex items-center gap-2 group">
+                <div className="w-8 h-8 rounded-full bg-[#5ccfee] flex items-center justify-center text-[#1a1a1a] font-bold group-hover:ring-2 group-hover:ring-white transition-all">
+                  {getInitial()}
                 </div>
-                <button
-                  onClick={handleProfileClick}
-                  className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-[#333] hover:text-white"
+                <span className="hidden md:block text-sm font-medium text-white group-hover:text-[#5ccfee]">
+                  {userProfile?.displayName || 'Profile'}
+                </span>
+              </Link>
+
+              {/* Logout button that matches header aesthetic */}
+              <button
+                onClick={confirmLogout}
+                className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer flex items-center"
+                aria-label="Logout"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 mr-1"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4 mr-2"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+                <span className="hidden md:inline">Logout</span>
+              </button>
+            </div>
+
+            {/* Logout confirmation dialog */}
+            {showLogoutConfirm && (
+              <div className="absolute right-0 top-full mt-2 p-4 bg-[#252525] rounded-md shadow-xl border border-[#333] z-30 w-60">
+                <p className="text-sm text-white mb-3 font-medium">
+                  Are you sure you want to logout?
+                </p>
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={cancelLogout}
+                    className="px-3 py-1.5 bg-[#333] text-white text-sm rounded-md hover:bg-[#444] transition-colors"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                  My Profile
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-[#333] hover:text-white"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4 mr-2"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+                    No
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="px-3 py-1.5 bg-[#00BFFF] text-white text-sm rounded-md hover:bg-[#5ccfee] transition-colors"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
-                  </svg>
-                  Logout
-                </button>
+                    Yes
+                  </button>
+                </div>
               </div>
             )}
           </div>
