@@ -116,11 +116,10 @@ function User() {
 
   // User data
   const [userData, setUserData] = useState({
-    name: 'Jane Smith',
+    displayName: 'Jane Smith',
     email: 'jane.smith@example.com',
     bio: 'Movie enthusiast and aspiring critic. I love everything from classic films to modern blockbusters.',
     stats: {
-      moviesWatched: 120,
       moviesLiked: 45,
       watchlistCount: 30,
     },
@@ -134,7 +133,7 @@ function User() {
 
   // Form state - initialize only once
   const [editForm, setEditForm] = useState({
-    name: userData.name,
+    name: userData.displayName,
     bio: userData.bio,
     selectedGenres: [...userData.favoriteGenres],
   })
@@ -151,7 +150,7 @@ function User() {
 
   const handleProfileEdit = () => {
     setEditForm({
-      name: userData.name,
+      name: userData.displayName,
       bio: userData.bio,
       selectedGenres: [...userData.favoriteGenres],
     })
@@ -182,7 +181,7 @@ function User() {
     e.preventDefault()
     setUserData((prev) => ({
       ...prev,
-      name: editForm.name,
+      displayName: editForm.name,
       bio: editForm.bio,
       favoriteGenres: editForm.selectedGenres,
     }))
@@ -593,7 +592,7 @@ function User() {
                 <div className="flex justify-between items-start mb-6">
                   <div>
                     <h3 className="text-2xl font-bold text-white mb-1">
-                      {userData.name}
+                      {userData.displayName}
                     </h3>
                     <p className="text-gray-400 text-sm max-w-xl">
                       {userData.bio}
