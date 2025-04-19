@@ -514,75 +514,73 @@ function User() {
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          {/* User Profile Card */}
+          {/* User Profile Card - Redesigned for minimalism */}
           <div className="bg-[#1e1e1e] rounded-lg shadow-md overflow-hidden border border-[#2a2a2a]">
             {isEditingProfile ? (
               // Edit profile form
-              <form onSubmit={handleProfileSubmit} className="p-4">
-                <div className="flex flex-col md:flex-row md:gap-4 items-center">
-                  <div className="flex-1">
-                    <div className="mb-2">
-                      <label className="block text-xs font-medium text-gray-400 mb-1">
-                        Display Name
-                      </label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={editForm.name}
-                        onChange={handleEditFormChange}
-                        className="w-full bg-[#252525] text-white px-3 py-1.5 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
-                      />
-                    </div>
+              <form onSubmit={handleProfileSubmit} className="p-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-400 mb-1">
+                      Display Name
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={editForm.name}
+                      onChange={handleEditFormChange}
+                      className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
+                    />
+                  </div>
 
-                    <div>
-                      <label className="block text-xs font-medium text-gray-400 mb-1">
-                        About Me
-                      </label>
-                      <textarea
-                        name="bio"
-                        value={editForm.bio}
-                        onChange={handleEditFormChange}
-                        rows="2"
-                        className="w-full bg-[#252525] text-white px-3 py-1.5 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee] resize-none"
-                      ></textarea>
-                    </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-400 mb-1">
+                      About Me
+                    </label>
+                    <textarea
+                      name="bio"
+                      value={editForm.bio}
+                      onChange={handleEditFormChange}
+                      rows="3"
+                      className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee] resize-none"
+                    ></textarea>
+                  </div>
 
-                    {/* Favorite Genres Selection */}
-                    <div className="mt-3">
-                      <label className="block text-xs font-medium text-gray-400 mb-1">
-                        Favorite Genres
-                      </label>
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        {loading.genres ? (
-                          <div className="flex items-center text-gray-400 text-xs py-1">
-                            <div className="animate-spin h-3 w-3 border-b border-[#5ccfee] rounded-full mr-2"></div>
-                            Loading genres...
-                          </div>
-                        ) : (
-                          availableGenres.map((genre) => (
-                            <GenreToggle
-                              key={genre}
-                              genre={genre}
-                              selected={editForm.selectedGenres.includes(genre)}
-                              onToggle={handleGenreToggle}
-                            />
-                          ))
-                        )}
-                      </div>
+                  {/* Favorite Genres Selection */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-400 mb-2">
+                      Favorite Genres
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {loading.genres ? (
+                        <div className="flex items-center text-gray-400 text-xs py-1">
+                          <div className="animate-spin h-3 w-3 border-b border-[#5ccfee] rounded-full mr-2"></div>
+                          Loading genres...
+                        </div>
+                      ) : (
+                        availableGenres.map((genre) => (
+                          <GenreToggle
+                            key={genre}
+                            genre={genre}
+                            selected={editForm.selectedGenres.includes(genre)}
+                            onToggle={handleGenreToggle}
+                          />
+                        ))
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex space-x-2 mt-2 md:mt-0">
+                  <div className="flex justify-end space-x-3 pt-2">
                     <button
                       type="button"
                       onClick={() => setIsEditingProfile(false)}
-                      className="px-3 py-1.5 bg-[#333] hover:bg-[#444] text-xs rounded transition duration-200"
+                      className="px-4 py-2 bg-[#333] hover:bg-[#444] text-sm rounded transition duration-200"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-3 py-1.5 bg-[#5ccfee] hover:bg-[#4ab3d3] text-black text-xs font-semibold rounded transition duration-200"
+                      className="px-4 py-2 bg-[#5ccfee] hover:bg-[#4ab3d3] text-black text-sm font-semibold rounded transition duration-200"
                     >
                       Save
                     </button>
@@ -590,52 +588,132 @@ function User() {
                 </div>
               </form>
             ) : (
-              // Profile display
-              <div className="p-4 flex flex-col md:flex-row md:items-center">
-                <div className="flex items-center">
+              // Minimalist profile display
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-6">
                   <div>
-                    <h3 className="text-xl font-bold text-gray-200">
+                    <h3 className="text-2xl font-bold text-white mb-1">
                       {userData.name}
                     </h3>
-                    <p className="text-gray-400 text-sm line-clamp-2">
+                    <p className="text-gray-400 text-sm max-w-xl">
                       {userData.bio}
                     </p>
-                    <div className="flex space-x-2 mt-2">
-                      <button
-                        onClick={handleProfileEdit}
-                        className="inline-flex items-center px-3 py-1 bg-[#1e1e1e] hover:bg-[#333] text-xs rounded transition duration-200"
-                        aria-label="Edit profile"
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleProfileEdit}
+                      className="flex items-center px-3 py-1.5 bg-transparent hover:bg-[#2a2a2a] border border-[#444] text-sm rounded-md transition duration-200"
+                      aria-label="Edit profile"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 mr-1.5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-3.5 w-3.5 mr-1"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                        </svg>
-                        Edit
-                      </button>
-                      <button
-                        onClick={handleSettingsToggle}
-                        className="inline-flex items-center px-3 py-1 bg-[#1e1e1e] hover:bg-[#333] text-xs rounded transition duration-200"
-                        aria-label="Settings"
+                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                      </svg>
+                      Edit
+                    </button>
+                    <button
+                      onClick={handleSettingsToggle}
+                      className="flex items-center px-3 py-1.5 bg-transparent hover:bg-[#2a2a2a] border border-[#444] text-sm rounded-md transition duration-200"
+                      aria-label="Settings"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4 mr-1.5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-3.5 w-3.5 mr-1"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        Settings
-                      </button>
+                        <path
+                          fillRule="evenodd"
+                          d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      Settings
+                    </button>
+                  </div>
+                </div>
+
+                {/* User Activity Stats - More visual and minimalistic */}
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  <div className="bg-[#252525] rounded-md p-4 text-center">
+                    <div className="flex justify-center mb-2">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 text-[#5ccfee]"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                        />
+                      </svg>
                     </div>
+                    <div className="text-[#5ccfee] text-2xl font-bold mb-1">
+                      {userData.stats.moviesLiked}
+                    </div>
+                    <div className="text-gray-400 text-xs uppercase tracking-wide">
+                      Liked
+                    </div>
+                  </div>
+                  <div className="bg-[#252525] rounded-md p-4 text-center">
+                    <div className="flex justify-center mb-2">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 text-[#5ccfee]"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="text-[#5ccfee] text-2xl font-bold mb-1">
+                      {userData.stats.watchlistCount}
+                    </div>
+                    <div className="text-gray-400 text-xs uppercase tracking-wide">
+                      Watchlist
+                    </div>
+                  </div>
+                </div>
+
+                {/* Favorite Genres */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-300 mb-3">
+                    Favorite Genres
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {loading.genres ? (
+                      <div className="flex items-center text-gray-400 text-xs py-0.5">
+                        <div className="animate-spin h-3 w-3 border-b border-[#5ccfee] rounded-full mr-1"></div>
+                        Loading...
+                      </div>
+                    ) : userData.favoriteGenres.length > 0 ? (
+                      userData.favoriteGenres.map((genre, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1.5 bg-[#252525] text-[#5ccfee] rounded-md text-sm"
+                        >
+                          {genre}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-gray-400 text-sm">
+                        No favorite genres selected yet
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -643,9 +721,9 @@ function User() {
 
             {/* Settings Modal */}
             {isSettingsOpen && (
-              <div className="border-t border-[#2a2a2a] p-4">
-                <form onSubmit={handleSettingsSubmit} className="space-y-3">
-                  <h3 className="text-sm font-semibold mb-2 text-gray-200">
+              <div className="border-t border-[#2a2a2a] p-6">
+                <form onSubmit={handleSettingsSubmit} className="space-y-4">
+                  <h3 className="text-lg font-semibold mb-3 text-white">
                     Account Settings
                   </h3>
 
@@ -658,7 +736,7 @@ function User() {
                       name="email"
                       value={settingsForm.email}
                       onChange={handleSettingsFormChange}
-                      className="w-full bg-[#252525] text-white px-3 py-1.5 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
+                      className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
                     />
                   </div>
 
@@ -671,7 +749,7 @@ function User() {
                       name="currentPassword"
                       value={settingsForm.currentPassword}
                       onChange={handleSettingsFormChange}
-                      className="w-full bg-[#252525] text-white px-3 py-1.5 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
+                      className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
                     />
                   </div>
 
@@ -684,7 +762,7 @@ function User() {
                       name="newPassword"
                       value={settingsForm.newPassword}
                       onChange={handleSettingsFormChange}
-                      className="w-full bg-[#252525] text-white px-3 py-1.5 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
+                      className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
                     />
                   </div>
 
@@ -697,21 +775,21 @@ function User() {
                       name="confirmPassword"
                       value={settingsForm.confirmPassword}
                       onChange={handleSettingsFormChange}
-                      className="w-full bg-[#252525] text-white px-3 py-1.5 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
+                      className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
                     />
                   </div>
 
-                  <div className="flex justify-end space-x-2 pt-1">
+                  <div className="flex justify-end space-x-3 pt-2">
                     <button
                       type="button"
                       onClick={handleSettingsToggle}
-                      className="px-3 py-1.5 bg-[#333] hover:bg-[#444] text-xs rounded transition duration-200"
+                      className="px-4 py-2 bg-[#333] hover:bg-[#444] text-sm rounded transition duration-200"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-3 py-1.5 bg-[#5ccfee] hover:bg-[#4ab3d3] text-black text-xs font-semibold rounded transition duration-200"
+                      className="px-4 py-2 bg-[#5ccfee] hover:bg-[#4ab3d3] text-black text-sm font-semibold rounded transition duration-200"
                     >
                       Save Changes
                     </button>
@@ -719,104 +797,6 @@ function User() {
                 </form>
               </div>
             )}
-          </div>
-
-          {/* User Stats */}
-          <div className="bg-[#1e1e1e] rounded-lg shadow-md overflow-hidden border border-[#2a2a2a]">
-            <div className="p-3">
-              <div className="grid grid-cols-3 gap-2 mb-2">
-                <StatItem
-                  icon={
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-3.5 w-3.5 text-[#5ccfee] mr-1.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
-                      />
-                    </svg>
-                  }
-                  label="Watched"
-                  value={userData.stats.moviesWatched}
-                />
-
-                <StatItem
-                  icon={
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-3.5 w-3.5 text-[#5ccfee] mr-1.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                      />
-                    </svg>
-                  }
-                  label="Liked"
-                  value={userData.stats.moviesLiked}
-                />
-
-                <StatItem
-                  icon={
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-3.5 w-3.5 text-[#5ccfee] mr-1.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                      />
-                    </svg>
-                  }
-                  label="Watchlist"
-                  value={userData.stats.watchlistCount}
-                />
-              </div>
-
-              {/* Favorite Genres */}
-              <div className="flex items-center">
-                <div className="text-xs font-medium text-gray-400 mr-2 whitespace-nowrap">
-                  Favorite Genres:
-                </div>
-                <div className="flex flex-wrap gap-1 flex-1 min-w-0">
-                  {loading.genres ? (
-                    <div className="flex items-center text-gray-400 text-xs py-0.5">
-                      <div className="animate-spin h-3 w-3 border-b border-[#5ccfee] rounded-full mr-1"></div>
-                      Loading...
-                    </div>
-                  ) : userData.favoriteGenres.length > 0 ? (
-                    userData.favoriteGenres.map((genre, index) => (
-                      <span
-                        key={index}
-                        className="px-1.5 py-0.5 bg-[#5ccfee] bg-opacity-20 text-white rounded-full text-xs font-medium"
-                      >
-                        {genre}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-gray-400 text-xs">
-                      No favorite genres selected yet
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Movie Collections */}
