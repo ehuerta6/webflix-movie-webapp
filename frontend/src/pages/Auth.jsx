@@ -5,7 +5,9 @@ import { useAuth } from '../context/AuthContext'
 function Auth() {
   // Login form state
 
-  const { signUp, googleSignIn, logout, login } = useAuth()
+  {
+    /*} const { signUp, googleSignIn, logout, login } = useAuth() */
+  }
 
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
@@ -28,13 +30,6 @@ function Auth() {
   const handleGoBack = () => {
     navigate(-1) // Go back to the previous page in history
   }
-
-
-  const handleSignOut(){}
-
-  const handleSignIn(){}
-
-  const handleGoogleSignIn()
 
   // Validate login form
   const validateLoginForm = () => {

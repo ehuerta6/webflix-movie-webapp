@@ -1,10 +1,15 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import profilePic from './assets/profile-pic.jpg'
 import SearchBar from './components/SearchBar'
 
 function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const navigate = useNavigate()
+
+  const handleSearchClick = () => {
+    navigate('/search')
+  }
 
   return (
     <header className="flex justify-between items-center px-6 py-4 bg-[#1a1a1a] border-b border-[#2a2a2a] text-white">
@@ -34,9 +39,9 @@ function Header() {
           Shows
         </Link>
 
-        <button
-          onClick={() => setIsSearchOpen(true)}
-          className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer flex items-center"
+        <Link
+          to="/search"
+          className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer flex items-center no-underline app-link"
           aria-label="Search"
         >
           <svg
@@ -54,7 +59,7 @@ function Header() {
             />
           </svg>
           <span className="ml-1 hidden md:inline">Search</span>
-        </button>
+        </Link>
 
         <Link
           to="/login"
@@ -76,7 +81,12 @@ function Header() {
         </Link>
       </nav>
 
-      <SearchBar isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      {isSearchOpen && (
+        <SearchBar
+          isOpen={isSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
+        />
+      )}
     </header>
   )
 }
