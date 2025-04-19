@@ -577,7 +577,7 @@ function SearchPage() {
   return (
     <div className="min-h-screen bg-[#121212] text-white pb-10">
       {/* New minimalistic search bar at the top */}
-      <div className="w-full px-4 py-6 bg-[#1a1a1a] border-b border-[#2a2a2a] mb-8">
+      <div className="w-full px-4 py-6 bg-[#121212] border-b border-[#2a2a2a] mb-8">
         <form
           onSubmit={handleSearchSubmit}
           className="max-w-2xl mx-auto flex flex-col gap-3"
@@ -616,7 +616,7 @@ function SearchPage() {
           {/* Genre selector */}
           {genreList.length > 0 && (
             <div className="flex justify-center flex-wrap gap-2">
-              {genreList.slice(0, 10).map((genre) => (
+              {genreList.slice(0, 12).map((genre) => (
                 <button
                   key={genre.id}
                   type="button"
@@ -630,17 +630,6 @@ function SearchPage() {
                   {genre.name}
                 </button>
               ))}
-              <button
-                type="button"
-                onClick={() => {
-                  // Open a modal or dropdown with all genres
-                  // For now, we'll just console.log
-                  console.log('Show all genres')
-                }}
-                className="px-3 py-1 text-xs bg-[#252525] hover:bg-[#303030] text-[#5ccfee] rounded-full transition-colors"
-              >
-                More
-              </button>
             </div>
           )}
         </form>
