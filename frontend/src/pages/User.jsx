@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import profilePic from '../assets/profile-pic.jpg'
 import { fetchMovies, fetchGenres } from '../services/api'
 
 // Helper function to validate movie data
@@ -119,7 +118,6 @@ function User() {
   const [userData, setUserData] = useState({
     name: 'Jane Smith',
     email: 'jane.smith@example.com',
-    profilePicture: profilePic,
     bio: 'Movie enthusiast and aspiring critic. I love everything from classic films to modern blockbusters.',
     stats: {
       moviesWatched: 120,
@@ -522,14 +520,6 @@ function User() {
               // Edit profile form
               <form onSubmit={handleProfileSubmit} className="p-4">
                 <div className="flex flex-col md:flex-row md:gap-4 items-center">
-                  <div className="w-20 h-20 rounded-full overflow-hidden mb-2 md:mb-0 border border-[#5ccfee]">
-                    <img
-                      src={profilePic}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
                   <div className="flex-1">
                     <div className="mb-2">
                       <label className="block text-xs font-medium text-gray-400 mb-1">
@@ -603,14 +593,6 @@ function User() {
               // Profile display
               <div className="p-4 flex flex-col md:flex-row md:items-center">
                 <div className="flex items-center">
-                  <div className="w-20 h-20 rounded-full overflow-hidden mr-4 border border-[#5ccfee]">
-                    <img
-                      src={profilePic}
-                      alt={userData.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
                   <div>
                     <h3 className="text-xl font-bold text-gray-200">
                       {userData.name}

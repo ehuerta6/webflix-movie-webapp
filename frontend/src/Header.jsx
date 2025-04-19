@@ -1,6 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import profilePic from './assets/profile-pic.jpg'
 import SearchBar from './components/SearchBar'
 
 function Header() {
@@ -70,14 +69,10 @@ function Header() {
 
         <Link
           to="/user"
-          className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center ml-1 transition-transform duration-200 hover:scale-110 cursor-pointer no-underline app-link border border-transparent hover:border-[#5ccfee]"
+          className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer no-underline app-link"
           aria-label="User Profile"
         >
-          <img
-            src={profilePic}
-            alt="Profile"
-            className="w-full h-full object-cover"
-          />
+          Profile
         </Link>
       </nav>
 
