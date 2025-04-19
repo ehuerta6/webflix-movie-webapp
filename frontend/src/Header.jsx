@@ -1,13 +1,25 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import SearchBar from './components/SearchBar'
+import { useAuth } from './context/AuthContext'
 
 function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [showDropdown, setShowDropdown] = useState(false)
   const navigate = useNavigate()
+  const { currentUser, logout } = useAuth()
 
   const handleSearchClick = () => {
     navigate('/search')
+  }
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      navigate('/')
+    } catch (error) {
+      console.error('Failed to log out', error)
+    }
   }
 
   return (
@@ -60,20 +72,58 @@ function Header() {
           <span className="ml-1 hidden md:inline">Search</span>
         </Link>
 
-        <Link
-          to="/login"
-          className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer no-underline app-link"
-        >
-          Login
-        </Link>
+        {currentUser ? (
+          <div className="relative">
+            <button
+              className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer flex items-center"
+              onClick={() => setShowDropdown(!showDropdown)}
+            >
+              Profile
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4 ml-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d={showDropdown ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'}
+                />
+              </svg>
+            </button>
 
-        <Link
-          to="/user"
-          className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer no-underline app-link"
-          aria-label="User Profile"
-        >
-          Profile
-        </Link>
+            {showDropdown && (
+              <div className="absolute right-0 mt-2 py-2 w-48 bg-[#252525] rounded-md shadow-xl z-10">
+                <Link
+                  to="/user"
+                  className="block px-4 py-2 text-sm text-gray-200 hover:bg-[#333] hover:text-white"
+                  onClick={() => setShowDropdown(false)}
+                >
+                  My Profile
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout()
+                    setShowDropdown(false)
+                  }}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-[#333] hover:text-white"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <Link
+            to="/login"
+            className="text-sm md:text-base font-bold text-white hover:text-[#5ccfee] px-3 py-2 transition-all duration-200 hover:scale-105 cursor-pointer no-underline app-link"
+          >
+            Login
+          </Link>
+        )}
       </nav>
 
       {isSearchOpen && (

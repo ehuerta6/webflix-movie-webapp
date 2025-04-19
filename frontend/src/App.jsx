@@ -8,6 +8,7 @@ import Shows from './pages/Shows'
 import SearchPage from './pages/SearchPage'
 import Auth from './pages/Auth'
 import User from './pages/User'
+import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
 function App() {
@@ -23,7 +24,14 @@ function App() {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/login" element={<Auth />} />
             <Route path="/register" element={<Auth />} />
-            <Route path="/user" element={<User />} />
+            <Route
+              path="/user"
+              element={
+                <ProtectedRoute>
+                  <User />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/:type/:id" element={<Details />} />
           </Routes>
         </main>

@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchMovies, fetchGenres } from '../services/api'
+import { useAuth } from '../context/AuthContext'
+import { doc, updateDoc } from 'firebase/firestore'
+import { db } from '../firebase/firebase'
 
 // Helper function to validate movie data
 const isValidMovie = (movie) => {
@@ -101,6 +104,7 @@ const StatItem = ({ icon, label, value }) => (
 
 function User() {
   const navigate = useNavigate()
+  const { userProfile, currentUser, fetchUserProfile } = useAuth()
 
   // API data state
   const [genreMap, setGenreMap] = useState({})
@@ -112,18 +116,7 @@ function User() {
     liked: false,
     watchlist: false,
     recommendations: false,
-  })
-
-  // User data
-  const [userData, setUserData] = useState({
-    displayName: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    bio: 'Movie enthusiast and aspiring critic. I love everything from classic films to modern blockbusters.',
-    stats: {
-      moviesLiked: 45,
-      watchlistCount: 30,
-    },
-    favoriteGenres: ['Action', 'Drama', 'Sci-Fi', 'Thriller'],
+    profile: false,
   })
 
   // UI state
@@ -131,28 +124,55 @@ function User() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [availableGenres, setAvailableGenres] = useState([])
 
-  // Form state - initialize only once
+  // Form state - initialize once we have userProfile
   const [editForm, setEditForm] = useState({
-    name: userData.displayName,
-    bio: userData.bio,
-    selectedGenres: [...userData.favoriteGenres],
+    name: '',
+    bio: '',
+    selectedGenres: [],
   })
 
   const [settingsForm, setSettingsForm] = useState({
-    email: userData.email,
+    email: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   })
+
+  // Initialize form data when userProfile changes
+  useEffect(() => {
+    if (userProfile) {
+      setEditForm({
+        name: userProfile.displayName || '',
+        bio: userProfile.bio || '',
+        selectedGenres: userProfile.favoriteGenres || [],
+      })
+
+      setSettingsForm((prev) => ({
+        ...prev,
+        email: userProfile.email || '',
+      }))
+    }
+  }, [userProfile])
+
+  // Refresh user profile on mount
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      setLoading((prev) => ({ ...prev, profile: true }))
+      await fetchUserProfile()
+      setLoading((prev) => ({ ...prev, profile: false }))
+    }
+
+    loadUserProfile()
+  }, [fetchUserProfile])
 
   // Event handlers
   const handleGoBack = () => navigate(-1)
 
   const handleProfileEdit = () => {
     setEditForm({
-      name: userData.displayName,
-      bio: userData.bio,
-      selectedGenres: [...userData.favoriteGenres],
+      name: userProfile?.displayName || '',
+      bio: userProfile?.bio || '',
+      selectedGenres: userProfile?.favoriteGenres || [],
     })
     setIsEditingProfile(true)
   }
@@ -177,21 +197,33 @@ function User() {
     })
   }
 
-  const handleProfileSubmit = (e) => {
+  const handleProfileSubmit = async (e) => {
     e.preventDefault()
-    setUserData((prev) => ({
-      ...prev,
-      displayName: editForm.name,
-      bio: editForm.bio,
-      favoriteGenres: editForm.selectedGenres,
-    }))
-    setIsEditingProfile(false)
+    setLoading((prev) => ({ ...prev, profile: true }))
+
+    try {
+      // Update the profile in Firestore
+      const userRef = doc(db, 'users', currentUser.uid)
+      await updateDoc(userRef, {
+        displayName: editForm.name,
+        bio: editForm.bio,
+        favoriteGenres: editForm.selectedGenres,
+      })
+
+      // Refresh user profile
+      await fetchUserProfile()
+      setIsEditingProfile(false)
+    } catch (error) {
+      console.error('Error updating profile:', error)
+    } finally {
+      setLoading((prev) => ({ ...prev, profile: false }))
+    }
   }
 
   const handleSettingsToggle = () => {
     if (!isSettingsOpen) {
       setSettingsForm({
-        email: userData.email,
+        email: userProfile?.email || '',
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
@@ -207,7 +239,7 @@ function User() {
 
   const handleSettingsSubmit = (e) => {
     e.preventDefault()
-    setUserData((prev) => ({ ...prev, email: settingsForm.email }))
+    // Email/password update logic would go here
     setIsSettingsOpen(false)
   }
 
@@ -498,334 +530,345 @@ function User() {
 
   return (
     <div className="min-h-screen bg-[#121212] text-white py-4 px-3">
-      <div className="max-w-5xl mx-auto space-y-4">
-        {/* Header with Back Button and Page Title */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleGoBack}
-              className="flex items-center gap-1.5 text-white bg-[#1e1e1e] hover:bg-[#2e2e2e] px-3 py-1.5 rounded-md transition-colors text-sm"
-            >
-              <span className="text-sm">←</span> Go Back
-            </button>
-            <h1 className="text-2xl font-bold">User Profile</h1>
-          </div>
+      {loading.profile ? (
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin h-10 w-10 border-4 border-[#5ccfee] rounded-full border-t-transparent"></div>
         </div>
+      ) : (
+        <div className="max-w-5xl mx-auto space-y-4">
+          {/* Header with Back Button and Page Title */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleGoBack}
+                className="flex items-center gap-1.5 text-white bg-[#1e1e1e] hover:bg-[#2e2e2e] px-3 py-1.5 rounded-md transition-colors text-sm"
+              >
+                <span className="text-sm">←</span> Go Back
+              </button>
+              <h1 className="text-2xl font-bold">User Profile</h1>
+            </div>
+          </div>
 
-        <div className="grid grid-cols-1 gap-4">
-          {/* User Profile Card - Redesigned for minimalism */}
-          <div className="bg-[#1e1e1e] rounded-lg shadow-md overflow-hidden border border-[#2a2a2a]">
-            {isEditingProfile ? (
-              // Edit profile form
-              <form onSubmit={handleProfileSubmit} className="p-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1">
-                      Display Name
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={editForm.name}
-                      onChange={handleEditFormChange}
-                      className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
-                    />
+          <div className="grid grid-cols-1 gap-4">
+            {/* User Profile Card - Redesigned for minimalism */}
+            <div className="bg-[#1e1e1e] rounded-lg shadow-md overflow-hidden border border-[#2a2a2a]">
+              {isEditingProfile ? (
+                // Edit profile form
+                <form onSubmit={handleProfileSubmit} className="p-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">
+                        Display Name
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={editForm.name}
+                        onChange={handleEditFormChange}
+                        className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">
+                        About Me
+                      </label>
+                      <textarea
+                        name="bio"
+                        value={editForm.bio}
+                        onChange={handleEditFormChange}
+                        rows="3"
+                        className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee] resize-none"
+                      ></textarea>
+                    </div>
+
+                    {/* Favorite Genres Selection */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-2">
+                        Favorite Genres
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {loading.genres ? (
+                          <div className="flex items-center text-gray-400 text-xs py-1">
+                            <div className="animate-spin h-3 w-3 border-b border-[#5ccfee] rounded-full mr-2"></div>
+                            Loading genres...
+                          </div>
+                        ) : (
+                          availableGenres.map((genre) => (
+                            <GenreToggle
+                              key={genre}
+                              genre={genre}
+                              selected={editForm.selectedGenres.includes(genre)}
+                              onToggle={handleGenreToggle}
+                            />
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end space-x-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingProfile(false)}
+                        className="px-4 py-2 bg-[#333] hover:bg-[#444] text-sm rounded transition duration-200"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-[#5ccfee] hover:bg-[#4ab3d3] text-black text-sm font-semibold rounded transition duration-200"
+                        disabled={loading.profile}
+                      >
+                        {loading.profile ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              ) : (
+                // Minimalist profile display
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-6">
+                    <div>
+                      <h3 className="text-2xl font-bold text-white mb-1">
+                        {userProfile?.displayName || 'User'}
+                      </h3>
+                      <p className="text-gray-400 text-sm max-w-xl">
+                        {userProfile?.bio || 'No bio available'}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleProfileEdit}
+                        className="flex items-center px-3 py-1.5 bg-transparent hover:bg-[#2a2a2a] border border-[#444] text-sm rounded-md transition duration-200"
+                        aria-label="Edit profile"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4 mr-1.5"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                        Edit
+                      </button>
+                      <button
+                        onClick={handleSettingsToggle}
+                        className="flex items-center px-3 py-1.5 bg-transparent hover:bg-[#2a2a2a] border border-[#444] text-sm rounded-md transition duration-200"
+                        aria-label="Settings"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4 mr-1.5"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        Settings
+                      </button>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1">
-                      About Me
-                    </label>
-                    <textarea
-                      name="bio"
-                      value={editForm.bio}
-                      onChange={handleEditFormChange}
-                      rows="3"
-                      className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee] resize-none"
-                    ></textarea>
+                  {/* User Activity Stats - More visual and minimalistic */}
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="bg-[#252525] rounded-md p-4 text-center">
+                      <div className="flex justify-center mb-2">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5 text-[#5ccfee]"
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="text-[#5ccfee] text-2xl font-bold mb-1">
+                        {userProfile?.stats?.moviesLiked || 0}
+                      </div>
+                      <div className="text-gray-400 text-xs uppercase tracking-wide">
+                        Liked
+                      </div>
+                    </div>
+                    <div className="bg-[#252525] rounded-md p-4 text-center">
+                      <div className="flex justify-center mb-2">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5 text-[#5ccfee]"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="text-[#5ccfee] text-2xl font-bold mb-1">
+                        {userProfile?.stats?.watchlistCount || 0}
+                      </div>
+                      <div className="text-gray-400 text-xs uppercase tracking-wide">
+                        Watchlist
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Favorite Genres Selection */}
+                  {/* Favorite Genres */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-2">
+                    <h4 className="text-sm font-semibold text-gray-300 mb-3">
                       Favorite Genres
-                    </label>
+                    </h4>
                     <div className="flex flex-wrap gap-2">
                       {loading.genres ? (
-                        <div className="flex items-center text-gray-400 text-xs py-1">
-                          <div className="animate-spin h-3 w-3 border-b border-[#5ccfee] rounded-full mr-2"></div>
-                          Loading genres...
+                        <div className="flex items-center text-gray-400 text-xs py-0.5">
+                          <div className="animate-spin h-3 w-3 border-b border-[#5ccfee] rounded-full mr-1"></div>
+                          Loading...
                         </div>
-                      ) : (
-                        availableGenres.map((genre) => (
-                          <GenreToggle
-                            key={genre}
-                            genre={genre}
-                            selected={editForm.selectedGenres.includes(genre)}
-                            onToggle={handleGenreToggle}
-                          />
+                      ) : userProfile?.favoriteGenres?.length > 0 ? (
+                        userProfile.favoriteGenres.map((genre, index) => (
+                          <span
+                            key={index}
+                            className="px-3 py-1.5 bg-[#252525] text-[#5ccfee] rounded-md text-sm"
+                          >
+                            {genre}
+                          </span>
                         ))
+                      ) : (
+                        <span className="text-gray-400 text-sm">
+                          No favorite genres selected yet
+                        </span>
                       )}
                     </div>
                   </div>
-
-                  <div className="flex justify-end space-x-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingProfile(false)}
-                      className="px-4 py-2 bg-[#333] hover:bg-[#444] text-sm rounded transition duration-200"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-[#5ccfee] hover:bg-[#4ab3d3] text-black text-sm font-semibold rounded transition duration-200"
-                    >
-                      Save
-                    </button>
-                  </div>
                 </div>
-              </form>
-            ) : (
-              // Minimalist profile display
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <h3 className="text-2xl font-bold text-white mb-1">
-                      {userData.displayName}
+              )}
+
+              {/* Settings Modal */}
+              {isSettingsOpen && (
+                <div className="border-t border-[#2a2a2a] p-6">
+                  <form onSubmit={handleSettingsSubmit} className="space-y-4">
+                    <h3 className="text-lg font-semibold mb-3 text-white">
+                      Account Settings
                     </h3>
-                    <p className="text-gray-400 text-sm max-w-xl">
-                      {userData.bio}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleProfileEdit}
-                      className="flex items-center px-3 py-1.5 bg-transparent hover:bg-[#2a2a2a] border border-[#444] text-sm rounded-md transition duration-200"
-                      aria-label="Edit profile"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 mr-1.5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                      </svg>
-                      Edit
-                    </button>
-                    <button
-                      onClick={handleSettingsToggle}
-                      className="flex items-center px-3 py-1.5 bg-transparent hover:bg-[#2a2a2a] border border-[#444] text-sm rounded-md transition duration-200"
-                      aria-label="Settings"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 mr-1.5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Settings
-                    </button>
-                  </div>
-                </div>
 
-                {/* User Activity Stats - More visual and minimalistic */}
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  <div className="bg-[#252525] rounded-md p-4 text-center">
-                    <div className="flex justify-center mb-2">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 text-[#5ccfee]"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                        />
-                      </svg>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={settingsForm.email}
+                        onChange={handleSettingsFormChange}
+                        className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
+                        disabled
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Email cannot be changed
+                      </p>
                     </div>
-                    <div className="text-[#5ccfee] text-2xl font-bold mb-1">
-                      {userData.stats.moviesLiked}
-                    </div>
-                    <div className="text-gray-400 text-xs uppercase tracking-wide">
-                      Liked
-                    </div>
-                  </div>
-                  <div className="bg-[#252525] rounded-md p-4 text-center">
-                    <div className="flex justify-center mb-2">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 text-[#5ccfee]"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
-                        />
-                      </svg>
-                    </div>
-                    <div className="text-[#5ccfee] text-2xl font-bold mb-1">
-                      {userData.stats.watchlistCount}
-                    </div>
-                    <div className="text-gray-400 text-xs uppercase tracking-wide">
-                      Watchlist
-                    </div>
-                  </div>
-                </div>
 
-                {/* Favorite Genres */}
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-300 mb-3">
-                    Favorite Genres
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {loading.genres ? (
-                      <div className="flex items-center text-gray-400 text-xs py-0.5">
-                        <div className="animate-spin h-3 w-3 border-b border-[#5ccfee] rounded-full mr-1"></div>
-                        Loading...
-                      </div>
-                    ) : userData.favoriteGenres.length > 0 ? (
-                      userData.favoriteGenres.map((genre, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1.5 bg-[#252525] text-[#5ccfee] rounded-md text-sm"
-                        >
-                          {genre}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-gray-400 text-sm">
-                        No favorite genres selected yet
-                      </span>
-                    )}
-                  </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">
+                        Current Password
+                      </label>
+                      <input
+                        type="password"
+                        name="currentPassword"
+                        value={settingsForm.currentPassword}
+                        onChange={handleSettingsFormChange}
+                        className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">
+                        New Password
+                      </label>
+                      <input
+                        type="password"
+                        name="newPassword"
+                        value={settingsForm.newPassword}
+                        onChange={handleSettingsFormChange}
+                        className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">
+                        Confirm New Password
+                      </label>
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        value={settingsForm.confirmPassword}
+                        onChange={handleSettingsFormChange}
+                        className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
+                      />
+                    </div>
+
+                    <div className="flex justify-end space-x-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={handleSettingsToggle}
+                        className="px-4 py-2 bg-[#333] hover:bg-[#444] text-sm rounded transition duration-200"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-[#5ccfee] hover:bg-[#4ab3d3] text-black text-sm font-semibold rounded transition duration-200"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
                 </div>
+              )}
+            </div>
+
+            {/* Movie Collections */}
+            <div className="bg-[#1e1e1e] rounded-lg shadow-md overflow-hidden border border-[#2a2a2a]">
+              <div className="p-4 space-y-6">
+                <MovieCollection
+                  title="Liked Movies"
+                  movies={likedMovies}
+                  actions={collectionActions.liked}
+                  isLoading={loading.liked}
+                />
+
+                <MovieCollection
+                  title="Watchlist"
+                  movies={watchlistMovies}
+                  actions={collectionActions.watchlist}
+                  isLoading={loading.watchlist}
+                />
+
+                <MovieCollection
+                  title="Recommended For You"
+                  movies={recommendedMovies}
+                  actions={collectionActions.recommendations}
+                  isLoading={loading.recommendations}
+                  description="Based on your favorite genres"
+                />
               </div>
-            )}
-
-            {/* Settings Modal */}
-            {isSettingsOpen && (
-              <div className="border-t border-[#2a2a2a] p-6">
-                <form onSubmit={handleSettingsSubmit} className="space-y-4">
-                  <h3 className="text-lg font-semibold mb-3 text-white">
-                    Account Settings
-                  </h3>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={settingsForm.email}
-                      onChange={handleSettingsFormChange}
-                      className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1">
-                      Current Password
-                    </label>
-                    <input
-                      type="password"
-                      name="currentPassword"
-                      value={settingsForm.currentPassword}
-                      onChange={handleSettingsFormChange}
-                      className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1">
-                      New Password
-                    </label>
-                    <input
-                      type="password"
-                      name="newPassword"
-                      value={settingsForm.newPassword}
-                      onChange={handleSettingsFormChange}
-                      className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1">
-                      Confirm New Password
-                    </label>
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      value={settingsForm.confirmPassword}
-                      onChange={handleSettingsFormChange}
-                      className="w-full bg-[#252525] text-white px-3 py-2 text-sm rounded border border-[#333] focus:outline-none focus:ring-1 focus:ring-[#5ccfee]"
-                    />
-                  </div>
-
-                  <div className="flex justify-end space-x-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={handleSettingsToggle}
-                      className="px-4 py-2 bg-[#333] hover:bg-[#444] text-sm rounded transition duration-200"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-[#5ccfee] hover:bg-[#4ab3d3] text-black text-sm font-semibold rounded transition duration-200"
-                    >
-                      Save Changes
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-          </div>
-
-          {/* Movie Collections */}
-          <div className="bg-[#1e1e1e] rounded-lg shadow-md overflow-hidden border border-[#2a2a2a]">
-            <div className="p-4 space-y-6">
-              <MovieCollection
-                title="Liked Movies"
-                movies={likedMovies}
-                actions={collectionActions.liked}
-                isLoading={loading.liked}
-              />
-
-              <MovieCollection
-                title="Watchlist"
-                movies={watchlistMovies}
-                actions={collectionActions.watchlist}
-                isLoading={loading.watchlist}
-              />
-
-              <MovieCollection
-                title="Recommended For You"
-                movies={recommendedMovies}
-                actions={collectionActions.recommendations}
-                isLoading={loading.recommendations}
-                description="Based on your favorite genres"
-              />
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
