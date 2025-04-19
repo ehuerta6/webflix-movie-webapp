@@ -97,7 +97,7 @@ import {
   signInWithPopup,
   updateProfile,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 
 const AuthContext = createContext();
@@ -169,12 +169,10 @@ export function AuthProvider({ children }) {
         await setDoc(userRef, {
           uid,
           displayName: displayName || 'Webflix User',
+          username: email.split('@')[0],
           email,
-          createdAt: serverTimestamp(),
-          settings: {
-            notifications: true,
-            darkMode: true,
-          },
+          bio: 'Movie enthusiast and aspiring critic.',
+          favoriteGenres: [],
           watchlist: [],
           favorites: [],
         });
@@ -255,8 +253,10 @@ users/
   ├── {userId}/
   │     ├── uid: string                 // Firebase auth user ID
   │     ├── displayName: string         // User's display name
+  │     ├── username: string            // User's unique username (for @mentions)
   │     ├── email: string               // User's email address
-  │     ├── createdAt: timestamp        // When the account was created
+  │     ├── bio: string                 // User's bio or description
+  │     ├── favoriteGenres: string[]    // List of favorite movie/show genres
   │     │
   │     ├── watchlist: [                // Movies/shows the user wants to watch
   │     │     {
@@ -267,7 +267,6 @@ users/
   │     │         backdrop: string,     // URL to backdrop image (optional)
   │     │         rating: string,       // Rating (e.g., "8.5")
   │     │         year: string,         // Release year
-  │     │         addedAt: timestamp    // When the item was added to watchlist
   │     │     }
   │     │   ]
   │     │
@@ -280,7 +279,6 @@ users/
   │               backdrop: string,     // URL to backdrop image (optional)
   │               rating: string,       // Rating (e.g., "8.5")
   │               year: string,         // Release year
-  │               addedAt: timestamp    // When the item was added to favorites
   │           }
   │         ]
 ```
@@ -310,6 +308,11 @@ function Profile() {
         <div className='bg-[#1a1a1a] rounded-lg p-6 mb-8'>
           <div className='mb-6'>
             <h2 className='text-xl font-bold'>{userProfile?.displayName}</h2>
+            {userProfile?.username && (
+              <p className='text-[#5ccfee] font-medium'>
+                @{userProfile.username}
+              </p>
+            )}
             <p className='text-gray-400'>{currentUser.email}</p>
           </div>
 
@@ -353,7 +356,6 @@ import {
   arrayUnion,
   arrayRemove,
   getDoc,
-  serverTimestamp,
 } from 'firebase/firestore';
 
 // Add item to watchlist
@@ -367,7 +369,6 @@ export async function addToWatchlist(userId, media) {
     type: media.type,
     title: media.title,
     poster: media.poster,
-    addedAt: serverTimestamp(),
   };
 
   try {

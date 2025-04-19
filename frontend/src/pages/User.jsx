@@ -104,11 +104,16 @@ const StatItem = ({ icon, label, value }) => (
 
 function User() {
   const navigate = useNavigate()
-  const { userProfile, currentUser, fetchUserProfile } = useAuth()
+  const {
+    userProfile,
+    currentUser,
+    fetchUserProfile,
+    updateUserPassword,
+    updateUserEmail,
+  } = useAuth()
   const [userStats, setUserStats] = useState({
     movieCount: 0,
     showCount: 0,
-    joinDate: null,
   })
 
   // API data state
@@ -132,6 +137,7 @@ function User() {
   // Form state - initialize once we have userProfile
   const [editForm, setEditForm] = useState({
     name: '',
+    username: '',
     bio: '',
     selectedGenres: [],
   })
@@ -142,6 +148,10 @@ function User() {
     newPassword: '',
     confirmPassword: '',
   })
+
+  const [settingsError, setSettingsError] = useState('')
+  const [settingsSuccess, setSettingsSuccess] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Calculate user statistics
   useEffect(() => {
@@ -162,14 +172,9 @@ function User() {
         (item) => item.type === 'tv'
       ).length
 
-      const joinDate = userProfile.createdAt
-        ? new Date(userProfile.createdAt.seconds * 1000)
-        : new Date()
-
       setUserStats({
         movieCount: movieFavorites + movieWatchlist,
         showCount: showFavorites + showWatchlist,
-        joinDate,
       })
     }
   }, [userProfile])
@@ -179,6 +184,7 @@ function User() {
     if (userProfile) {
       setEditForm({
         name: userProfile.displayName || '',
+        username: userProfile.username || '',
         bio: userProfile.bio || '',
         selectedGenres: userProfile.favoriteGenres || [],
       })
@@ -340,6 +346,7 @@ function User() {
   const handleProfileEdit = () => {
     setEditForm({
       name: userProfile?.displayName || '',
+      username: userProfile?.username || '',
       bio: userProfile?.bio || '',
       selectedGenres: userProfile?.favoriteGenres || [],
     })
@@ -373,11 +380,20 @@ function User() {
     try {
       // Update the profile in Firestore
       const userRef = doc(db, 'users', currentUser.uid)
-      await updateDoc(userRef, {
+
+      // Prepare update data
+      const updateData = {
         displayName: editForm.name,
+        username: editForm.username,
         bio: editForm.bio,
-        favoriteGenres: editForm.selectedGenres,
-      })
+      }
+
+      // Only include favoriteGenres if there are selections
+      if (editForm.selectedGenres.length > 0) {
+        updateData.favoriteGenres = editForm.selectedGenres
+      }
+
+      await updateDoc(userRef, updateData)
 
       // Refresh user profile
       await fetchUserProfile()
@@ -404,20 +420,121 @@ function User() {
   const handleSettingsFormChange = (e) => {
     const { name, value } = e.target
     setSettingsForm((prev) => ({ ...prev, [name]: value }))
+    // Clear any previous error messages when form is changed
+    setSettingsError('')
+    setSettingsSuccess('')
   }
 
-  const handleSettingsSubmit = (e) => {
+  const handleSettingsSubmit = async (e) => {
     e.preventDefault()
-    // Email/password update logic would go here
-    setIsSettingsOpen(false)
-  }
 
-  // Format date to "Joined Month YYYY"
-  const formatJoinDate = (date) => {
-    if (!date) return 'New Member'
-    return `Joined ${date.toLocaleString('default', {
-      month: 'long',
-    })} ${date.getFullYear()}`
+    // Reset status messages
+    setSettingsError('')
+    setSettingsSuccess('')
+    setIsSubmitting(true)
+
+    try {
+      // Validate inputs
+      if (!settingsForm.currentPassword) {
+        throw new Error('Current password is required for any account changes')
+      }
+
+      let changesMade = false
+
+      // Check if we need to update the password
+      if (settingsForm.newPassword) {
+        // Validate password
+        if (settingsForm.newPassword.length < 6) {
+          throw new Error('New password must be at least 6 characters')
+        }
+
+        // Check if passwords match
+        if (settingsForm.newPassword !== settingsForm.confirmPassword) {
+          throw new Error('New passwords do not match')
+        }
+
+        // Update password
+        await updateUserPassword(
+          settingsForm.currentPassword,
+          settingsForm.newPassword
+        )
+
+        changesMade = true
+        setSettingsSuccess((prev) => prev + 'Password updated successfully. ')
+      }
+
+      // Check if we need to update the email
+      if (settingsForm.email !== userProfile.email) {
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(settingsForm.email)) {
+          throw new Error('Please enter a valid email address')
+        }
+
+        // Update email
+        await updateUserEmail(settingsForm.currentPassword, settingsForm.email)
+
+        changesMade = true
+        setSettingsSuccess((prev) => prev + 'Email updated successfully. ')
+      }
+
+      // If we get here with no changes made, show message
+      if (!changesMade) {
+        setSettingsSuccess('No changes were detected')
+      }
+
+      // Reset form (except email)
+      setSettingsForm({
+        email: settingsForm.email,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      })
+
+      // Close the settings form after a short delay
+      setTimeout(() => {
+        setIsSettingsOpen(false)
+        setSettingsSuccess('')
+      }, 2000)
+    } catch (error) {
+      console.error('Settings update error:', error)
+
+      // Set appropriate error message based on Firebase error codes
+      if (error.code) {
+        // Firebase Auth errors have a code property
+        switch (error.code) {
+          case 'auth/wrong-password':
+            setSettingsError('Incorrect current password')
+            break
+          case 'auth/requires-recent-login':
+            setSettingsError(
+              'For security reasons, please log out and log back in before changing your password'
+            )
+            break
+          case 'auth/email-already-in-use':
+            setSettingsError('This email is already in use by another account')
+            break
+          case 'auth/invalid-email':
+            setSettingsError('The email address is not valid')
+            break
+          case 'auth/weak-password':
+            setSettingsError('Password should be at least 6 characters')
+            break
+          case 'auth/too-many-requests':
+            setSettingsError(
+              'Too many unsuccessful attempts. Please try again later'
+            )
+            break
+          default:
+            setSettingsError(`Authentication error: ${error.message}`)
+        }
+      } else {
+        // Regular Error object
+        setSettingsError(error.message || 'Failed to update settings')
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   // Movie collection actions
@@ -663,10 +780,28 @@ function User() {
                     userProfile?.displayName || 'Webflix User'
                   )}
                 </h1>
+                {isEditingProfile ? (
+                  <div className="mt-2 mb-2">
+                    <label className="block text-sm font-bold text-gray-300 mb-1">
+                      USERNAME
+                    </label>
+                    <input
+                      type="text"
+                      name="username"
+                      value={editForm.username}
+                      onChange={handleEditFormChange}
+                      className="bg-[#252525] text-white px-3 py-1.5 rounded border border-[#333] w-full max-w-md"
+                      placeholder="Username (no spaces)"
+                    />
+                  </div>
+                ) : (
+                  userProfile?.username && (
+                    <p className="text-[#5ccfee] font-medium">
+                      @{userProfile.username}
+                    </p>
+                  )
+                )}
                 <p className="text-gray-400">{currentUser?.email}</p>
-                <p className="text-gray-400 text-sm">
-                  {formatJoinDate(userStats.joinDate)}
-                </p>
               </div>
 
               {/* Bio section */}
@@ -688,6 +823,54 @@ function User() {
                     {userProfile?.bio ||
                       'No bio yet. Click Edit Profile to add one!'}
                   </p>
+                )}
+              </div>
+
+              {/* Favorite Genres section */}
+              <div className="mb-6">
+                <h2 className="text-sm font-bold text-gray-300 mb-2">
+                  FAVORITE GENRES
+                </h2>
+                {isEditingProfile ? (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {loading.genres ? (
+                      <div className="flex items-center text-gray-400 text-xs py-1">
+                        <div className="animate-spin h-3 w-3 border-b border-[#5ccfee] rounded-full mr-2"></div>
+                        Loading genres...
+                      </div>
+                    ) : availableGenres.length > 0 ? (
+                      availableGenres.map((genre) => (
+                        <GenreToggle
+                          key={genre}
+                          genre={genre}
+                          selected={editForm.selectedGenres.includes(genre)}
+                          onToggle={handleGenreToggle}
+                        />
+                      ))
+                    ) : (
+                      <p className="text-gray-400 text-sm">
+                        No genres available
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {userProfile?.favoriteGenres?.length > 0 ? (
+                      userProfile.favoriteGenres.map((genre, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1.5 bg-[#252525] text-[#5ccfee] rounded-md text-sm"
+                        >
+                          {genre}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-gray-400 text-sm">
+                        No favorite genres selected yet. Click Edit Profile to
+                        add some!
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -781,6 +964,20 @@ function User() {
                   <h2 className="text-lg font-bold mb-4">Account Settings</h2>
                   <form onSubmit={handleSettingsSubmit}>
                     <div className="grid gap-4 max-w-md">
+                      {/* Error message */}
+                      {settingsError && (
+                        <div className="bg-red-500/10 text-red-500 p-3 rounded-md text-sm">
+                          {settingsError}
+                        </div>
+                      )}
+
+                      {/* Success message */}
+                      {settingsSuccess && (
+                        <div className="bg-green-500/10 text-green-500 p-3 rounded-md text-sm">
+                          {settingsSuccess}
+                        </div>
+                      )}
+
                       <div>
                         <label className="block text-sm font-medium text-gray-400 mb-1">
                           Email Address
@@ -792,11 +989,13 @@ function User() {
                           onChange={handleSettingsFormChange}
                           className="bg-[#252525] text-white px-3 py-1.5 rounded border border-[#333] w-full"
                           placeholder="Email"
+                          disabled={isSubmitting}
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-400 mb-1">
-                          Current Password
+                          Current Password{' '}
+                          <span className="text-red-400">*</span>
                         </label>
                         <input
                           type="password"
@@ -805,7 +1004,12 @@ function User() {
                           onChange={handleSettingsFormChange}
                           className="bg-[#252525] text-white px-3 py-1.5 rounded border border-[#333] w-full"
                           placeholder="Current Password"
+                          required
+                          disabled={isSubmitting}
                         />
+                        <p className="text-xs text-gray-400 mt-1">
+                          Required for any account changes
+                        </p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-400 mb-1">
@@ -818,7 +1022,14 @@ function User() {
                           onChange={handleSettingsFormChange}
                           className="bg-[#252525] text-white px-3 py-1.5 rounded border border-[#333] w-full"
                           placeholder="New Password"
+                          disabled={isSubmitting}
                         />
+                        {settingsForm.newPassword &&
+                          settingsForm.newPassword.length < 6 && (
+                            <p className="text-xs text-yellow-400 mt-1">
+                              Password must be at least 6 characters
+                            </p>
+                          )}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-400 mb-1">
@@ -831,21 +1042,39 @@ function User() {
                           onChange={handleSettingsFormChange}
                           className="bg-[#252525] text-white px-3 py-1.5 rounded border border-[#333] w-full"
                           placeholder="Confirm New Password"
+                          disabled={isSubmitting}
                         />
+                        {settingsForm.newPassword &&
+                          settingsForm.confirmPassword &&
+                          settingsForm.newPassword !==
+                            settingsForm.confirmPassword && (
+                            <p className="text-xs text-red-400 mt-1">
+                              Passwords do not match
+                            </p>
+                          )}
                       </div>
                       <div className="flex gap-2 mt-2">
                         <button
                           type="button"
                           onClick={handleSettingsToggle}
-                          className="px-4 py-2 text-sm font-medium rounded bg-[#252525] text-gray-200 hover:bg-[#333]"
+                          className="px-4 py-2 text-sm font-medium rounded bg-[#252525] text-gray-200 hover:bg-[#333] disabled:opacity-50"
+                          disabled={isSubmitting}
                         >
                           Cancel
                         </button>
                         <button
                           type="submit"
-                          className="px-4 py-2 text-sm font-medium rounded bg-[#5ccfee] text-black hover:bg-[#4abfe0]"
+                          className="px-4 py-2 text-sm font-medium rounded bg-[#5ccfee] text-black hover:bg-[#4abfe0] disabled:opacity-50 flex items-center justify-center"
+                          disabled={isSubmitting}
                         >
-                          Save Changes
+                          {isSubmitting ? (
+                            <>
+                              <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></span>
+                              Saving...
+                            </>
+                          ) : (
+                            'Save Changes'
+                          )}
                         </button>
                       </div>
                     </div>

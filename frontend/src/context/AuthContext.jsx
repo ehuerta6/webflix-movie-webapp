@@ -8,8 +8,12 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   updateProfile,
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updateEmail,
 } from 'firebase/auth'
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
 
 const AuthContext = createContext()
 const googleProvider = new GoogleAuthProvider()
@@ -88,20 +92,71 @@ export function AuthProvider({ children }) {
         await setDoc(userRef, {
           uid,
           displayName: displayName || 'Webflix User',
+          username: email.split('@')[0],
           email,
-          createdAt: serverTimestamp(),
           bio: 'Movie enthusiast and aspiring critic.',
           favoriteGenres: [],
-          stats: {
-            moviesLiked: 0,
-            watchlistCount: 0,
-          },
           watchlist: [],
           favorites: [],
         })
       } catch (error) {
         console.error('Error creating user document:', error)
       }
+    }
+  }
+
+  // Re-authenticate the user before sensitive operations
+  const reauthenticate = async (currentPassword) => {
+    if (!currentUser) throw new Error('No user is currently logged in')
+
+    const credential = EmailAuthProvider.credential(
+      currentUser.email,
+      currentPassword
+    )
+
+    return reauthenticateWithCredential(currentUser, credential)
+  }
+
+  // Update user password
+  const updateUserPassword = async (currentPassword, newPassword) => {
+    try {
+      if (!currentUser) throw new Error('No user is currently logged in')
+
+      // First re-authenticate the user
+      await reauthenticate(currentPassword)
+
+      // Then update the password
+      await updatePassword(currentUser, newPassword)
+
+      return { success: true }
+    } catch (error) {
+      console.error('Error updating password:', error)
+      throw error
+    }
+  }
+
+  // Update user email
+  const updateUserEmail = async (currentPassword, newEmail) => {
+    try {
+      if (!currentUser) throw new Error('No user is currently logged in')
+
+      // First re-authenticate the user
+      await reauthenticate(currentPassword)
+
+      // Then update the email
+      await updateEmail(currentUser, newEmail)
+
+      // Update email in Firestore
+      const userRef = doc(db, 'users', currentUser.uid)
+      await updateDoc(userRef, { email: newEmail })
+
+      // Refresh user profile
+      await fetchUserProfile()
+
+      return { success: true }
+    } catch (error) {
+      console.error('Error updating email:', error)
+      throw error
     }
   }
 
@@ -147,6 +202,9 @@ export function AuthProvider({ children }) {
     signup,
     loginWithGoogle,
     fetchUserProfile,
+    updateUserPassword,
+    updateUserEmail,
+    reauthenticate,
   }
 
   return (
